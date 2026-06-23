@@ -22,11 +22,11 @@ export function Keyboard({ type }: KeyboardProps) {
       if (!padRef.current) return;
       const keys = padRef.current.querySelectorAll(".key-btn");
       gsap.from(keys, {
-        y: 24,
+        y: 10,
         opacity: 0,
-        duration: 0.35,
-        stagger: 0.015,
-        ease: "back.out(1.4)",
+        duration: 0.3,
+        stagger: 0.01,
+        ease: "power2.out",
       });
     },
     { dependencies: [type], scope: padRef }

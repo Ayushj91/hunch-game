@@ -118,16 +118,16 @@ export function LandingScreen({ onStart }: LandingScreenProps) {
         ))}
       </div>
 
-      <div ref={panelRef} className="glass-strong rounded-2xl p-6 max-[440px]:p-5">
+      <div ref={panelRef} className="rounded-2xl p-6 max-[440px]:p-5" style={{ background: "var(--card-solid)", border: "1.5px solid var(--line-bold)", boxShadow: "var(--shadow)" }}>
         <div
           ref={toggleRef}
-          className="relative grid grid-cols-2 gap-1.5 rounded-2xl p-1.5 mb-5"
-          style={{ background: "var(--violet-soft)" }}
+          className="relative grid grid-cols-2 gap-1 rounded-xl p-1 mb-5"
+          style={{ background: "var(--tile-ghost-bg)", border: "1.5px solid var(--line-bold)" }}
         >
           <div
             ref={pillRef}
-            className="absolute top-1.5 left-1.5 h-[calc(100%-12px)] rounded-xl pointer-events-none glass-strong"
-            style={{ width: "calc(50% - 6px)" }}
+            className="absolute top-1 left-1 h-[calc(100%-8px)] rounded-lg pointer-events-none"
+            style={{ width: "calc(50% - 4px)", background: "var(--card-solid)", border: "1px solid var(--line-bold)", boxShadow: "var(--shadow)" }}
           />
           <button
             type="button"

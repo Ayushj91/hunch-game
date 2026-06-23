@@ -40,58 +40,46 @@ export function GameRow({
   useGSAP(
     () => {
       if (!animate || !guess) return;
-      tileRefs.current.forEach((el, i) => {
-        if (!el) return;
-        gsap.fromTo(
-          el,
-          { y: -20, scale: 0.4, rotationX: 90, opacity: 0 },
-          {
-            y: 0,
-            scale: 1,
-            rotationX: 0,
-            opacity: 1,
-            duration: 0.4,
-            delay: i * 0.08,
-            ease: "back.out(2.2)",
-          }
-        );
-      });
 
-      const pegDelayBase = len * 0.08 + 0.1;
-      let pi = 0;
-      if (result) {
-        for (let k = 0; k < result.b; k++) {
-          const peg = pegRefs.current[pi++];
-          if (peg) {
-            gsap.fromTo(
-              peg,
-              { scale: 0, opacity: 0 },
-              {
-                scale: 1,
-                opacity: 1,
-                duration: 0.35,
-                delay: pegDelayBase + k * 0.07,
-                ease: "elastic.out(1, 0.5)",
-              }
-            );
-          }
+      const tiles = tileRefs.current.filter(Boolean) as HTMLElement[];
+      const pegs = pegRefs.current.filter(Boolean) as HTMLElement[];
+
+      const tl = gsap.timeline();
+
+      // Tiles: sequential fade-up, smooth and quick
+      tl.fromTo(
+        tiles,
+        { y: 7, opacity: 0, scale: 0.88 },
+        {
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          duration: 0.28,
+          stagger: 0.055,
+          ease: "power2.out",
         }
-        for (let k = 0; k < result.c; k++) {
-          const peg = pegRefs.current[pi++];
-          if (peg) {
-            gsap.fromTo(
-              peg,
-              { scale: 0, opacity: 0 },
-              {
-                scale: 1,
-                opacity: 1,
-                duration: 0.35,
-                delay: pegDelayBase + (result.b + k) * 0.07,
-                ease: "elastic.out(1, 0.5)",
-              }
-            );
-          }
-        }
+      );
+
+      // Row: very subtle acknowledgment pulse after last tile lands
+      if (rowRef.current) {
+        tl.to(rowRef.current, { scale: 1.012, duration: 0.1, ease: "power1.out" }, ">-0.04")
+          .to(rowRef.current, { scale: 1, duration: 0.22, ease: "power2.inOut" });
+      }
+
+      // Pegs: all fade in together as a calm group, slightly after tiles
+      if (pegs.length) {
+        tl.fromTo(
+          pegs,
+          { scale: 0.55, opacity: 0 },
+          {
+            scale: 1,
+            opacity: 1,
+            duration: 0.22,
+            stagger: 0.06,
+            ease: "power2.out",
+          },
+          ">"
+        );
       }
     },
     { dependencies: [animate, guess, result, len] }
@@ -99,34 +87,43 @@ export function GameRow({
 
   useEffect(() => {
     if (!shake || !rowRef.current) return;
-    gsap.fromTo(
-      rowRef.current,
-      { x: 0 },
-      {
-        x: 8,
-        duration: 0.07,
-        repeat: 5,
-        yoyo: true,
-        ease: "power1.inOut",
-        onComplete: () => {
-          if (rowRef.current) gsap.set(rowRef.current, { x: 0 });
-        },
-      }
-    );
+    const tl = gsap.timeline({
+      onComplete: () => {
+        if (rowRef.current) gsap.set(rowRef.current, { x: 0 });
+      },
+    });
+    // Short, crisp bump — not a prolonged rattle
+    tl.to(rowRef.current, { x: 6, duration: 0.06, ease: "power2.out" })
+      .to(rowRef.current, { x: -5, duration: 0.09, ease: "power2.inOut" })
+      .to(rowRef.current, { x: 4, duration: 0.09, ease: "power2.inOut" })
+      .to(rowRef.current, { x: 0, duration: 0.12, ease: "power2.out" });
   }, [shake]);
+
+  // Subtle tile stamp when a letter is typed
+  useGSAP(
+    () => {
+      if (!isActive || !current) return;
+      const idx = current.length - 1;
+      const el = tileRefs.current[idx];
+      if (!el) return;
+      gsap.fromTo(el, { scale: 0.78 }, { scale: 1, duration: 0.16, ease: "power2.out" });
+    },
+    { dependencies: [current, isActive] }
+  );
 
   useGSAP(
     () => {
-      if (!isActive || !rowRef.current) return;
-      gsap.to(rowRef.current, {
-        boxShadow: "0 0 0 2px var(--accent-soft), 0 8px 32px var(--accent-glow)",
-        duration: 1.2,
-        repeat: -1,
-        yoyo: true,
-        ease: "sine.inOut",
-      });
+      if (!rowRef.current) return;
+      if (!isActive) {
+        gsap.set(rowRef.current, { boxShadow: "none" });
+        return;
+      }
+      gsap.set(rowRef.current, { boxShadow: "0 0 0 1.5px var(--accent)" });
       return () => {
-        if (rowRef.current) gsap.killTweensOf(rowRef.current);
+        if (rowRef.current) {
+          gsap.killTweensOf(rowRef.current);
+          gsap.set(rowRef.current, { boxShadow: "none" });
+        }
       };
     },
     { dependencies: [isActive] }
