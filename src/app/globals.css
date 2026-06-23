@@ -228,7 +228,9 @@
   }
 
   .key-btn {
-    @apply font-body font-bold rounded-xl py-3.5 cursor-pointer transition-all duration-150;
+    @apply font-body font-bold rounded-xl cursor-pointer transition-all duration-150;
+    @apply flex items-center justify-center min-w-0;
+    @apply h-11 text-[15px] max-[440px]:h-9 max-[440px]:text-[13px];
     background: var(--card-solid);
     border: 2px solid var(--line);
     color: var(--ink);

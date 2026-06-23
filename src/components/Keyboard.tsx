@@ -3,10 +3,7 @@
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { useRef } from "react";
-import {
-  LETTER_ROWS,
-  NUMBER_ROWS,
-} from "@/lib/constants";
+import { LETTER_ROWS, NUMBER_ROWS } from "@/lib/constants";
 import { useGameStore } from "@/hooks/useGameState";
 import type { GameType } from "@/types/game";
 
@@ -36,7 +33,11 @@ export function Keyboard({ type }: KeyboardProps) {
   );
 
   const pressKey = (el: HTMLElement) => {
-    gsap.fromTo(el, { scale: 0.92 }, { scale: 1, duration: 0.12, ease: "power2.out" });
+    gsap.fromTo(
+      el,
+      { scale: 0.92 },
+      { scale: 1, duration: 0.12, ease: "power2.out" }
+    );
   };
 
   const renderKey = (ch: string, className = "") => {
@@ -46,7 +47,7 @@ export function Keyboard({ type }: KeyboardProps) {
       <button
         key={ch}
         type="button"
-        className={`key-btn flex-1 min-w-0 py-4 text-lg ${className} ${gone ? "gone" : used ? "used" : ""}`}
+        className={`key-btn flex-1 ${className} ${gone ? "gone" : used ? "used" : ""}`}
         disabled={over}
         onClick={(e) => {
           pressKey(e.currentTarget);
@@ -58,23 +59,27 @@ export function Keyboard({ type }: KeyboardProps) {
     );
   };
 
+  const rowClass = "flex gap-1 max-[440px]:gap-0.5 justify-center items-stretch";
+
   return (
     <div
       ref={padRef}
-      className={`flex flex-col gap-2 max-w-[560px] mx-auto ${type === "numbers" ? "numpad" : "letpad"}`}
+      className={`flex flex-col gap-1.5 max-[440px]:gap-1 max-w-[560px] mx-auto ${
+        type === "numbers" ? "numpad" : "letpad"
+      }`}
     >
       {type === "numbers" ? (
         <>
-          <div className="flex gap-1.5 justify-center">
+          <div className={rowClass}>
             {NUMBER_ROWS[0].split("").map((ch) => renderKey(ch))}
           </div>
-          <div className="flex gap-1.5 justify-center">
+          <div className={rowClass}>
             {NUMBER_ROWS[1].split("").map((ch) => renderKey(ch))}
           </div>
-          <div className="flex gap-1.5 justify-center">
+          <div className={rowClass}>
             <button
               type="button"
-              className="key-btn enter flex-[3] py-4 text-sm"
+              className="key-btn enter flex-[3] text-xs max-[440px]:text-[11px]"
               disabled={over}
               onClick={(e) => {
                 pressKey(e.currentTarget);
@@ -85,7 +90,7 @@ export function Keyboard({ type }: KeyboardProps) {
             </button>
             <button
               type="button"
-              className="key-btn fn flex-[2] py-4 text-[13px] text-ink-soft"
+              className="key-btn fn flex-[2] text-xs text-ink-soft"
               disabled={over}
               onClick={(e) => {
                 pressKey(e.currentTarget);
@@ -98,16 +103,16 @@ export function Keyboard({ type }: KeyboardProps) {
         </>
       ) : (
         <>
-          <div className="flex gap-1.5 justify-center">
+          <div className={rowClass}>
             {LETTER_ROWS[0].split("").map((ch) => renderKey(ch))}
           </div>
-          <div className="flex gap-1.5 justify-center px-6">
+          <div className={`${rowClass} px-4 max-[440px]:px-2`}>
             {LETTER_ROWS[1].split("").map((ch) => renderKey(ch))}
           </div>
-          <div className="flex gap-1.5 justify-center">
+          <div className={rowClass}>
             <button
               type="button"
-              className="key-btn enter flex-[1.5] py-4 text-sm"
+              className="key-btn enter flex-[1.4] text-xs max-[440px]:text-[11px]"
               disabled={over}
               onClick={(e) => {
                 pressKey(e.currentTarget);
@@ -119,7 +124,7 @@ export function Keyboard({ type }: KeyboardProps) {
             {LETTER_ROWS[2].split("").map((ch) => renderKey(ch))}
             <button
               type="button"
-              className="key-btn fn flex-[1.5] py-4 text-[13px] text-ink-soft"
+              className="key-btn fn flex-[1.4] text-xs text-ink-soft"
               disabled={over}
               onClick={(e) => {
                 pressKey(e.currentTarget);

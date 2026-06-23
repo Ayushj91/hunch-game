@@ -34,8 +34,8 @@ export function GameRow({
 
   const tileSize =
     len >= 5
-      ? "w-10 h-11 text-lg max-[380px]:w-9 max-[380px]:h-10 max-[380px]:text-base"
-      : "w-11 h-12 text-xl max-[380px]:w-10 max-[380px]:h-11 max-[380px]:text-lg";
+      ? "w-10 h-10 text-lg max-[440px]:w-9 max-[440px]:h-9 max-[440px]:text-base"
+      : "w-11 h-11 text-xl max-[440px]:w-10 max-[440px]:h-10 max-[440px]:text-lg";
 
   useGSAP(
     () => {

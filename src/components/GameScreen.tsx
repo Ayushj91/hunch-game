@@ -157,9 +157,9 @@ export function GameScreen({ onHome, onAgain }: GameScreenProps) {
 
       {/* Keyboard dock */}
       {!over && !showOutPrompt && (
-        <div className="flex-shrink-0 z-10 mx-3 mb-3 glass rounded-2xl px-3 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))]">
+        <div className="flex-shrink-0 z-10 mx-3 mb-2 glass rounded-2xl px-3 pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom))] max-[440px]:mx-2 max-[440px]:px-2">
           <p
-            className={`text-sm text-center font-semibold min-h-5 mb-2.5 ${
+            className={`text-sm text-center font-semibold min-h-5 mb-2 max-[440px]:text-xs max-[440px]:mb-1.5 ${
               messageKind === "bad"
                 ? "text-accent"
                 : messageKind === "good"
