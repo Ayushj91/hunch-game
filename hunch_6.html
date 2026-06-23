@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hunch — a daily guessing game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#faf8f5;
+    --card:#ffffff;
+    --ink:#33302e;
+    --ink-soft:#8a8580;
+    --ink-faint:#bdb8b2;
+    --line:#ece8e3;
+    --line-bold:#ddd8d1;
+    --accent:#e8896b;
+    --accent-soft:#fbeee9;
+    --bull:#6bbf9a;
+    --bull-soft:#e6f4ee;
+    --cow:#e8b95a;
+    --cow-soft:#fbf2dd;
+    --display:'Fraunces',Georgia,serif;
+    --body:'Inter',system-ui,sans-serif;
+    --r:14px;
+    --r-lg:20px;
+  }
+  body.dark, html.predark body{
+    --bg:#1a1816;
+    --card:#231f1d;
+    --ink:#efe9e3;
+    --ink-soft:#a59c93;
+    --ink-faint:#6b635b;
+    --line:#322d2a;
+    --line-bold:#403a35;
+    --accent:#f0997b;
+    --accent-soft:#3a2a23;
+    --bull:#5fc299;
+    --bull-soft:#1f3329;
+    --cow:#e8b95a;
+    --cow-soft:#33291a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--body);
+    -webkit-font-smoothing:antialiased;
+    min-height:100%;
+    display:flex;flex-direction:column;align-items:center;
+    padding:32px 18px 64px;
+    overflow-x:hidden;
+    transition:background-color .25s ease, color .25s ease;
+  }
+  /* full-height Wordle-style layout while a game is on screen */
+  body.playing{
+    height:100dvh;min-height:0;padding:0;overflow:hidden;
+    justify-content:flex-start;
+  }
+  body.playing > header,
+  body.playing > footer{display:none;}
+  .scanlines,.sky-deco{display:none;}
+
+  header{width:100%;max-width:620px;display:flex;justify-content:space-between;align-items:center;margin-bottom:30px;}
+  .hdr-right{display:flex;align-items:center;gap:14px;}
+  .theme-btn{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:var(--card);border:1px solid var(--line);color:var(--ink-soft);cursor:pointer;transition:color .12s, border-color .12s, background .12s;}
+  .theme-btn:hover{color:var(--ink);border-color:var(--line-bold);}
+  .theme-btn svg{display:block;}
+  .theme-btn .ico-moon{display:none;}
+  body.dark .theme-btn .ico-sun{display:none;}
+  body.dark .theme-btn .ico-moon{display:block;}
+  .brand{display:flex;align-items:center;gap:10px;cursor:pointer;}
+  .brand .dot{font-size:22px;line-height:1;}
+  .brand h1{font-family:var(--display);font-weight:600;font-size:23px;letter-spacing:-.2px;color:var(--ink);}
+  .brand h1 span{color:var(--accent);}
+
+  .screen{width:100%;max-width:620px;}
+  .hidden{display:none !important;}
+
+  /* ---------- LANDING ---------- */
+  .hero{text-align:center;margin-bottom:30px;}
+  .hero h2{font-family:var(--display);font-weight:500;font-size:34px;line-height:1.15;color:var(--ink);letter-spacing:-.4px;}
+  .hero h2 em{font-style:italic;color:var(--accent);}
+
+  .lockmark{display:flex;justify-content:center;gap:12px;margin:24px 0 28px;}
+  .lockmark .cell{
+    width:68px;height:80px;border-radius:var(--r-lg);background:var(--card);
+    border:1px solid var(--line-bold);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--display);font-weight:600;font-size:36px;color:var(--ink-faint);
+  }
+
+  .modetoggle{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--bg);border:1px solid var(--line);border-radius:15px;padding:6px;margin-bottom:18px;}
+  .modetoggle button{
+    font-family:var(--body);font-weight:600;font-size:15px;color:var(--ink-soft);
+    background:transparent;border:none;border-radius:11px;padding:13px 6px;cursor:pointer;line-height:1.25;
+    transition:background .15s,color .15s;
+  }
+  .modetoggle button small{display:block;font-weight:500;font-size:11px;color:var(--ink-faint);margin-top:3px;}
+  .modetoggle button:hover{color:var(--ink);}
+  .modetoggle button.sel{background:var(--card);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.06);}
+  .modetoggle button.sel small{color:var(--accent);opacity:.75;}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:28px;}
+  .panel.daily-mode .custom-only{display:none;}
+  .daily-note{font-size:14px;color:var(--ink-soft);text-align:center;line-height:1.5;margin-bottom:24px;}
+  .daily-note b{color:var(--ink);font-weight:600;}
+  .opt-group{margin-bottom:24px;}
+  .opt-group:last-of-type{margin-bottom:26px;}
+  .opt-label{font-size:12px;font-weight:500;letter-spacing:.3px;color:var(--ink-faint);margin-bottom:11px;display:flex;justify-content:space-between;align-items:baseline;text-transform:uppercase;}
+  .opt-label .hintv{text-transform:none;font-weight:500;font-size:13px;color:var(--ink-faint);letter-spacing:0;}
+  .seg{display:grid;gap:9px;}
+  .seg.three{grid-template-columns:repeat(3,1fr);}
+  .seg.two{grid-template-columns:repeat(2,1fr);}
+  .seg button{
+    font-family:var(--body);font-weight:600;font-size:17px;color:var(--ink-soft);
+    background:var(--bg);border:1px solid var(--line);border-radius:13px;padding:16px 6px;cursor:pointer;
+    transition:border-color .15s, color .15s, background .15s;line-height:1.3;
+  }
+  .seg button small{display:block;font-family:var(--body);font-weight:500;font-size:11px;color:var(--ink-faint);margin-top:3px;}
+  .seg button:hover{border-color:var(--line-bold);color:var(--ink);}
+  .seg button.sel{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+  .seg button.sel small{color:var(--accent);opacity:.75;}
+
+  .start-btn{
+    width:100%;font-family:var(--body);font-weight:600;font-size:17px;letter-spacing:.2px;
+    background:var(--accent);color:#fff;border:none;border-radius:var(--r);padding:18px;cursor:pointer;
+    transition:background .15s, transform .08s;
+  }
+  .start-btn:hover{background:#df7857;}
+  .start-btn:active{transform:scale(.99);}
+  .config-summary{font-size:14px;color:var(--ink-faint);text-align:center;margin-top:16px;}
+  .config-summary b{color:var(--ink-soft);font-weight:600;}
+
+  .mini-stats{display:flex;justify-content:center;gap:0;margin-top:26px;border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;background:var(--card);}
+  .mini-stats .ms{flex:1;text-align:center;padding:20px 6px;}
+  .mini-stats .ms + .ms{border-left:1px solid var(--line);}
+  .mini-stats .ms .k{font-size:12px;color:var(--ink-faint);font-weight:500;margin-bottom:4px;}
+  .mini-stats .ms .v{font-family:var(--display);font-weight:600;font-size:26px;color:var(--ink);}
+  .mini-stats .ms .v.flame{color:var(--accent);}
+
+  /* ---------- GAME (Wordle-style three zones) ---------- */
+  #game{display:flex;flex-direction:column;}
+  body.playing #game{height:100dvh;max-width:100%;}
+  .gwrap{width:100%;max-width:620px;margin:0 auto;}
+
+  .gtopbar{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;max-width:660px;margin:0 auto;padding:12px 18px;border-bottom:1px solid var(--line);flex-shrink:0;}
+  .gtop-center{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;}
+  .icon-btn{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:none;border:1px solid var(--line);color:var(--ink-soft);cursor:pointer;transition:color .12s, border-color .12s, background .12s;}
+  .icon-btn:hover{color:var(--ink);border-color:var(--line-bold);background:var(--bg);}
+  .icon-btn svg{display:block;}
+
+  .modebar{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;}
+  .modebar .chip{font-size:12px;font-weight:500;color:var(--ink-soft);background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:4px 12px;}
+  .modebar .chip b{color:var(--accent);font-weight:600;}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;}
+  .legend .lg{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-faint);font-weight:500;}
+  .legend .dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
+  .legend .dot.bull{background:var(--bull);} .legend .dot.cow{background:var(--cow);} .legend .dot.miss{background:var(--ink-faint);}
+
+  .gmiddle{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding:18px;overflow-y:auto;min-height:0;}
+  .gmiddle.done .board{display:none;}
+  .board{display:flex;flex-direction:column;align-items:stretch;margin:auto 0;width:100%;max-width:480px;}
+  .grid{display:flex;flex-direction:column;gap:10px;width:100%;}
+  .gridrow{
+    display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:10px;
+    border:1px solid var(--line);border-radius:14px;background:var(--card);
+    padding:14px 18px;min-height:58px;transition:border-color .15s, background .15s;
+  }
+  .gridrow.active{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .gridrow.guessed{background:var(--bg);}
+  .gridrow.empty{opacity:.55;}
+  .gnum{font-family:var(--body);font-size:13px;font-weight:600;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
+  .gword{display:flex;justify-content:center;gap:2px;}
+  .gword .ch{
+    font-family:var(--display);font-weight:600;color:var(--ink);text-transform:uppercase;
+    text-align:center;letter-spacing:1px;
+  }
+  .gword .ch.empty{color:var(--line-bold);}
+  .gword .ch.cursor{color:var(--accent);}
+  /* fixed peg slots on the right: one per position */
+  .result-pegs{display:flex;align-items:center;gap:6px;justify-content:flex-end;}
+  .peg{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--line-bold);background:transparent;}
+  .peg.bull{background:var(--bull);border-color:var(--bull);}
+  .peg.cow{background:var(--cow);border-color:var(--cow);}
+  @keyframes fade{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:none;}}
+  @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);}}
+  .gridrow.err{animation:shake .35s;border-color:var(--accent);}
+
+  .gbottom{flex-shrink:0;width:100%;padding:10px 18px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--card);}
+  .msg{font-size:13.5px;text-align:center;min-height:20px;margin:2px 0 12px;color:var(--ink-soft);}
+  .giveup{display:block;margin:12px auto 0;background:none;border:none;font-family:var(--body);font-size:12.5px;color:var(--ink-faint);cursor:pointer;padding:6px 10px;border-radius:8px;transition:color .12s, background .12s;}
+  .giveup:hover{color:var(--ink-soft);background:var(--bg);}
+  .giveup:active{transform:scale(.97);}
+  .msg.bad{color:var(--accent);} .msg.good{color:var(--bull);}
+
+  .pad{display:flex;flex-direction:column;gap:8px;max-width:560px;margin:0 auto;}
+  .krow{display:flex;gap:7px;justify-content:center;}
+  .krow.mid{padding:0 24px;}
+  .pad .key{flex:1;min-width:0;padding:16px 0;font-size:18px;}
+  .pad.numpad .key{font-size:20px;}
+  .pad.letpad .key.enter,.pad.letpad .key.fn{flex:1.5;}
+  .pad.numpad .key.enter{flex:3;}
+  .pad.numpad .key.fn{flex:2;}
+  .key{font-family:var(--body);font-weight:600;font-size:18px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:16px 0;cursor:pointer;transition:border-color .12s, background .12s, color .12s, transform .06s;}
+  .key:hover{border-color:var(--line-bold);background:var(--card);}
+  .key:active{transform:scale(.95);}
+  .key.used{color:var(--ink-faint);background:var(--bg);border-color:var(--line);text-decoration:line-through;text-decoration-color:var(--ink-faint);}
+  .key.gone{color:var(--ink-faint);background:var(--line);border-color:var(--line);opacity:.55;text-decoration:none;}
+  .key.gone:hover{background:var(--line);border-color:var(--line);}
+  .key.fn{font-size:13px;color:var(--ink-soft);}
+  .key.enter{background:var(--accent);border-color:var(--accent);color:#fff;font-size:14px;}
+  .key.enter:hover{background:#df7857;}
+
+  .result{display:none;text-align:center;width:100%;max-width:420px;}
+  .result.show{display:block;animation:fade .35s ease;}
+  .verdict{font-family:var(--display);font-weight:600;font-size:34px;margin-bottom:6px;color:var(--ink);letter-spacing:-.3px;}
+  .verdict.win{color:var(--accent);} .verdict.lose{color:var(--ink-soft);}
+  .sub{font-size:15px;color:var(--ink-soft);margin-bottom:22px;}
+  .sub b{color:var(--ink);font-weight:600;}
+  .grid-share{display:inline-flex;flex-direction:column;gap:5px;margin-bottom:24px;}
+  .grow{display:flex;gap:5px;justify-content:center;}
+  .gp{width:18px;height:18px;border-radius:5px;background:var(--line);}
+  .gp.b{background:var(--bull);} .gp.c{background:var(--cow);} .gp.x{background:var(--line-bold);}
+  .actions{display:flex;gap:11px;justify-content:center;flex-wrap:wrap;}
+  .btn{font-family:var(--body);font-weight:600;font-size:15px;padding:14px 28px;border:1px solid var(--line-bold);border-radius:var(--r);cursor:pointer;background:var(--card);color:var(--ink);transition:background .12s, transform .06s;}
+  .btn:hover{background:var(--bg);}
+  .btn:active{transform:scale(.98);}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .btn.primary:hover{background:#df7857;}
+  .countdown{font-size:13px;color:var(--ink-faint);margin-top:22px;font-variant-numeric:tabular-nums;}
+  .countdown b{color:var(--ink-soft);font-weight:600;}
+
+  footer{margin-top:30px;font-size:12.5px;color:var(--ink-faint);text-align:center;line-height:1.7;}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(51,48,46,.32);display:none;align-items:center;justify-content:center;padding:20px;z-index:100;}
+  .modal-overlay.show{display:flex;animation:fade .2s ease;}
+  .modal{background:var(--card);border-radius:var(--r-lg);padding:26px 26px 22px;max-width:360px;width:100%;text-align:center;box-shadow:0 20px 50px -16px rgba(51,48,46,.45);}
+  .modal-title{font-family:var(--display);font-weight:600;font-size:21px;color:var(--ink);margin-bottom:8px;letter-spacing:-.3px;}
+  .modal-text{font-size:14px;color:var(--ink-soft);line-height:1.6;margin-bottom:20px;}
+  .modal-actions{display:flex;gap:10px;justify-content:center;}
+  .modal-actions .btn{flex:1;}
+  .modal.help{max-width:420px;text-align:left;}
+  .modal.help .modal-title{text-align:center;margin-bottom:16px;}
+  .help-body{margin-bottom:20px;}
+  .help-body p{font-size:14.5px;color:var(--ink-soft);line-height:1.65;margin-bottom:14px;}
+  .help-body p:last-child{margin-bottom:0;}
+  .help-rule{display:flex;align-items:flex-start;gap:10px;font-size:14.5px;color:var(--ink-soft);line-height:1.5;margin-bottom:11px;}
+  .help-rule b{color:var(--ink);font-weight:600;}
+  .help-rule .dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+  .help-rule .dot.bull{background:var(--bull);} .help-rule .dot.cow{background:var(--cow);}
+  .help-rule .swatch{width:18px;height:18px;border-radius:5px;flex-shrink:0;margin-top:1px;}
+  .help-rule .swatch.bull{background:var(--bull);} .help-rule .swatch.cow{background:var(--cow);} .help-rule .swatch.miss{background:var(--ink-faint);}
+  .help-eg{background:var(--bg);border-radius:var(--r);padding:16px 16px 14px;}
+  .help-eg .eg-secret{font-size:13.5px;color:var(--ink-soft);text-align:center;margin-bottom:12px;}
+  .help-eg .eg-secret b{color:var(--ink);font-weight:600;font-family:var(--display);letter-spacing:1px;}
+  .eg-row{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;}
+  .eg-word{display:flex;gap:14px;}
+  .eg-col{display:flex;flex-direction:column;align-items:center;gap:5px;}
+  .eg-ch{font-family:var(--display);font-weight:600;font-size:24px;color:var(--ink);text-transform:uppercase;}
+  .eg-tag{font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:1px 5px;border-radius:99px;}
+  .eg-tag.bull{background:var(--bull);color:#fff;}
+  .eg-tag.cow{background:var(--cow);color:#fff;}
+  .eg-tag.none{background:transparent;color:var(--ink-faint);font-weight:600;}
+  .eg-row .result-pegs{display:flex;gap:6px;flex-shrink:0;}
+  .help-eg .eg-cap{font-size:13.5px;color:var(--ink-soft);text-align:center;margin-top:12px;}
+  .help-eg .eg-cap b{color:var(--ink);font-weight:600;}
+
+  @media (max-width:660px){
+    .panel{padding:24px 22px;}
+    .hero h2{font-size:30px;}
+    .lockmark .cell{width:58px;height:70px;font-size:32px;}
+    .lockmark{gap:10px;}
+    .seg button{font-size:16px;padding:14px 6px;}
+    .mini-stats .ms{padding:16px 6px;}
+    .mini-stats .ms .v{font-size:23px;}
+    .gmiddle{padding:14px;}
+    .pad .key{font-size:17px;padding:15px 0;}
+    .pad.numpad .key{font-size:18px;}
+    .verdict{font-size:30px;}
+  }
+  @media (max-width:440px){
+    .hero h2{font-size:25px;}
+    .panel{padding:20px 16px;}
+    .lockmark .cell{width:46px;height:54px;font-size:24px;border-radius:var(--r);}
+    .lockmark{gap:8px;}
+    .seg{gap:7px;}
+    .seg button{font-size:14px;padding:12px 4px;border-radius:var(--r);}
+    .seg button small{font-size:10px;}
+    .start-btn{padding:15px;font-size:15px;}
+    .config-summary{font-size:12.5px;}
+    .mini-stats .ms{padding:13px 6px;}
+    .mini-stats .ms .v{font-size:20px;}
+    .mini-stats .ms .k{font-size:11px;}
+    .gtopbar{padding:10px 12px;}
+    .legend{gap:10px;}
+    .legend .lg{font-size:10.5px;}
+    .gmiddle{padding:12px;}
+    .gridrow{padding:12px 14px;gap:8px;grid-template-columns:26px 1fr auto;min-height:50px;}
+    .gnum{font-size:12px;}
+    .result-pegs{gap:5px;}
+    .peg{width:13px;height:13px;}
+    .gbottom{padding:8px 10px calc(12px + env(safe-area-inset-bottom));}
+    .krow{gap:5px;} .krow.mid{padding:0 12px;}
+    .pad{gap:6px;}
+    .pad .key{font-size:15px;padding:13px 0;border-radius:11px;}
+    .pad.numpad .key{font-size:16px;}
+    .key.fn,.key.enter{font-size:12px;}
+    .verdict{font-size:26px;}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important;}}
+
+  /* ---------- juice: staggered tile reveal ---------- */
+  @keyframes tilein{
+    0%{transform:translateY(-6px) scale(.6);opacity:0;}
+    55%{transform:translateY(0) scale(1.12);opacity:1;}
+    100%{transform:translateY(0) scale(1);opacity:1;}
+  }
+  .gword .ch.reveal{animation:tilein .34s cubic-bezier(.2,.9,.3,1.3) both;}
+
+  /* peg landing: bounce in with a slight overshoot */
+  @keyframes pegland{
+    0%{transform:scale(0);}
+    60%{transform:scale(1.25);}
+    100%{transform:scale(1);}
+  }
+  .peg.bull,.peg.cow{animation:pegland .28s ease both;}
+
+  /* win celebration: gentle pulse on the verdict */
+  @keyframes verdictpop{0%{transform:scale(.9);opacity:0;}60%{transform:scale(1.06);}100%{transform:scale(1);opacity:1;}}
+  .verdict.win{animation:verdictpop .4s ease both;}
+
+  /* confetti */
+  .confetti-layer{position:fixed;inset:0;pointer-events:none;z-index:200;overflow:hidden;}
+  .confetti{position:absolute;top:-12px;width:9px;height:14px;border-radius:2px;opacity:.9;animation-name:confall;animation-timing-function:cubic-bezier(.3,.6,.5,1);animation-fill-mode:both;}
+  @keyframes confall{
+    0%{opacity:0;}
+    8%{opacity:.95;}
+    100%{transform:translateY(102vh) rotate(540deg);opacity:.2;}
+  }
+
+  /* ---------- out of tries prompt ---------- */
+  .out-prompt{display:none;width:100%;max-width:420px;margin:18px auto 0;text-align:center;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:22px 22px 20px;
+    animation:fade .25s ease;}
+  .out-prompt.show{display:block;}
+  .out-title{font-family:var(--display);font-weight:600;font-size:21px;color:var(--ink);margin-bottom:8px;letter-spacing:-.3px;}
+  .out-text{font-size:14px;color:var(--ink-soft);line-height:1.6;margin-bottom:18px;}
+  .out-actions{display:flex;gap:10px;justify-content:center;}
+  .out-actions .btn{flex:1;}
+
+</style>
+</head>
+<script>
+  (function(){try{
+    var t=localStorage.getItem("hunch.theme");
+    if(!t){t=(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";}
+    if(t==="dark")document.documentElement.classList.add("predark");
+  }catch(e){}})();
+</script>
+<body>
+
+<header>
+  <div class="brand" id="brandHome">
+    <div class="dot">🐮</div>
+    <h1>Hunch<span>.</span></h1>
+  </div>
+  <div class="hdr-right">
+  <button class="theme-btn" id="themeBtn" aria-label="Toggle dark mode">
+    <svg class="ico-sun" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    <svg class="ico-moon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.3 6.3 0 0 0 10.5 10.5z"/></svg>
+  </button>
+  </div>
+</header>
+
+<!-- ================= LANDING ================= -->
+<section class="screen" id="landing">
+  <div class="hero">
+    <h2>Guess the <em>secret code</em></h2>
+  </div>
+
+  <div class="lockmark">
+    <div class="cell">?</div><div class="cell">?</div><div class="cell">?</div><div class="cell">?</div>
+  </div>
+
+  <div class="panel daily-mode" id="panel">
+    <div class="modetoggle" id="modeToggle">
+      <button data-m="daily" class="sel">Daily<small>today's puzzle</small></button>
+      <button data-m="custom">Custom<small>your settings</small></button>
+    </div>
+
+    <div class="daily-note custom-only-hide" id="dailyNote">
+      One fresh <b>4-letter word</b> a day. Same puzzle for everyone — solve it, keep your streak.
+    </div>
+
+    <div class="custom-only">
+      <div class="opt-group">
+        <div class="opt-label"><span>Code type</span><span class="hintv" id="typeHint">digits 0–9</span></div>
+        <div class="seg two" id="segType">
+          <button data-v="numbers" class="sel">NUMBERS<small>0–9</small></button>
+          <button data-v="letters">WORDS<small>real words</small></button>
+        </div>
+      </div>
+
+      <div class="opt-group">
+        <div class="opt-label"><span>Code length</span><span class="hintv" id="lenHint">no repeats</span></div>
+        <div class="seg two" id="segLen">
+          <button data-v="4" class="sel">4</button>
+          <button data-v="5">5</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="start-btn" id="startBtn">START</button>
+    <div class="config-summary" id="configSummary"></div>
+  </div>
+
+  <div class="mini-stats">
+    <div class="ms"><div class="k" id="msK1">Streak</div><div class="v flame" id="lsStreak">0</div></div>
+    <div class="ms"><div class="k" id="msK2">Solved</div><div class="v" id="lsWins">0</div></div>
+    <div class="ms"><div class="k" id="msK3">Win %</div><div class="v" id="lsRate">—</div></div>
+  </div>
+</section>
+
+<!-- ================= GAME ================= -->
+<section class="screen hidden" id="game">
+  <div class="gtopbar">
+    <button class="icon-btn" id="backBtn" aria-label="Back to menu">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="gtop-center">
+      <div class="modebar" id="modebar"></div>
+      <div class="legend">
+        <span class="lg"><span class="dot bull"></span> bull · right &amp; in place</span>
+        <span class="lg"><span class="dot cow"></span> cow · right, wrong place</span>
+      </div>
+    </div>
+    <button class="icon-btn" id="helpBtn" aria-label="How to play">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.5 2.5 0 0 1 4.5 1.4c0 1.6-2 1.9-2 3.4"/><circle cx="12" cy="17.2" r="0.6" fill="currentColor" stroke="none"/></svg>
+    </button>
+  </div>
+
+  <div class="gmiddle" id="gmiddle">
+    <div class="board">
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <div class="out-prompt" id="outPrompt">
+      <div class="out-title">Out of tries</div>
+      <div class="out-text">You've used your 8 tries. Keep going just for the satisfaction, or reveal the answer.</div>
+      <div class="out-actions">
+        <button class="btn primary" id="keepGoingBtn">Keep going</button>
+        <button class="btn" id="revealBtn">Reveal code</button>
+      </div>
+    </div>
+
+    <div class="result" id="result">
+      <div class="verdict" id="verdict"></div>
+      <div class="sub" id="resultSub"></div>
+      <div class="grid-share" id="gridShare"></div>
+      <div class="actions">
+        <button class="btn primary" id="shareBtn">Share</button>
+        <button class="btn" id="againBtn">New game</button>
+      </div>
+      <div class="countdown" id="countdown"></div>
+    </div>
+  </div>
+
+  <div class="gbottom" id="inputZone">
+    <div class="msg" id="msg">enter your first guess</div>
+    <div class="pad" id="pad"></div>
+    <button class="giveup" id="giveUpBtn">Give up &amp; reveal the code</button>
+  </div>
+</section>
+
+<div class="modal-overlay" id="giveUpModal">
+  <div class="modal">
+    <div class="modal-title">Give up?</div>
+    <div class="modal-text" id="giveUpText">This will reveal the answer and end the game.</div>
+    <div class="modal-actions">
+      <button class="btn" id="giveUpStay">Keep trying</button>
+      <button class="btn primary" id="giveUpConfirm">Reveal code</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="quitModal">
+  <div class="modal">
+    <div class="modal-title">Leave this game?</div>
+    <div class="modal-text">Your progress on this puzzle will be saved — you can pick it back up later today.</div>
+    <div class="modal-actions">
+      <button class="btn" id="quitStay">Keep playing</button>
+      <button class="btn primary" id="quitLeave">Leave</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="helpModal">
+  <div class="modal help">
+    <div class="modal-title">How to play</div>
+    <div class="help-body">
+      <p>Guess the secret code in the fewest tries. After each guess, the pegs beside your row tell you how close you were:</p>
+      <div class="help-rule"><span class="dot bull"></span><span><b>Bull</b> — a correct symbol in the correct spot.</span></div>
+      <div class="help-rule"><span class="dot cow"></span><span><b>Cow</b> — a correct symbol, but in the wrong spot.</span></div>
+      <div class="help-eg" id="helpEg"></div>
+      <p>The pegs don't say <em>which</em> symbol is a bull or cow — that's the puzzle. There's a fresh code every day, and your streak grows each day you solve it.</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn primary" id="helpClose">Got it</button>
+    </div>
+  </div>
+</div>
+
+<footer>a new puzzle each day at midnight · your streak saves automatically</footer>
+
+<script>
+(function(){
+  "use strict";
+  const $=s=>document.querySelector(s);
+
+  /* ---- theme (persisted; defaults to OS preference) ---- */
+  const TKEY="hunch.theme";
+  function applyTheme(t){
+    const dark=(t==="dark");
+    document.body.classList.toggle("dark", dark);
+    document.documentElement.classList.remove("predark");
+  }
+  (function initTheme(){
+    let t=null;
+    try{ t=localStorage.getItem(TKEY); }catch(e){}
+    if(!t){ t=(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light"; }
+    applyTheme(t);
+  })();
+  function toggleTheme(){
+    const dark=!document.body.classList.contains("dark");
+    applyTheme(dark?"dark":"light");
+    try{ localStorage.setItem(TKEY, dark?"dark":"light"); }catch(e){}
+  }
+  function bindTheme(){const tb=document.getElementById("themeBtn");if(tb)tb.onclick=toggleTheme;}
+  if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",bindTheme);}else{bindTheme();}
+
+  const ALPHA="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const ACCEPT={
+    4:"that with this have from your they will just like what when more were time been some also them than good only into know make over then back want well said most much very even here need work year made take many life down last best such love home long look same used both come part find help high does game give next each must show feel sure team ever keep free away left city days name play real done care week case full live read told four hard mean once tell seen stop call head took came side went less line says open shit area face five kind hope news able book post talk fact guys half hand mind body food true fuck lost room else girl john nice yeah york idea past move wait data late stay deal soon turn form fire easy near plan west kids list meet type baby song word gave gets self cost held main road town fine hear rest term wife date goes land miss shot site eyes june club died film knew lead dead hold star test view hour wish gold gone july king bank east park role sent bill cool rate save blue fall fast felt size step page paid upon hate send vote hell lord born damn kill poor code door hair lose pick race seem sign walk loss ones safe army goal huge okay ways base deep mark pass risk ball card dark mine note wall boys fans pain paul rock cold anti beat text join kept sort drop fair feet link sale tour jobs sell sold wide fear lady plus unit hurt rule none ship band cash lack wear luck rich skin thus fish glad grow trip cars laws male spot holy lots shop sick uses cell drug foot hall mass nine heat fell ride slow tree whom runs wind cent lake arms fund hill jack pull push rose seat draw dude gain ring rise soul mike wild camp cast firm till gift mary shut wood copy dear dogs host onto rare boss wake busy ends farm file roll dont edge evil iron wine core lies port flat fuel kick mail pair zone bear boat duty path rain vice warm arts beer crew dick moon suit wins debt grew jump sets tech user flow hero joke loan soft feed legs pool guns hole milk pack snow weak cook cute fake hits task acts fill pure tony bird bowl meat mode neck zero alex jail tiny wave fail seek solo wing bomb hang info salt bell blow bond mile nick sees wars flag kiss load plot rent tips adam chat diet item lane mess navy tank tend yard golf laid tool mate matt rice roof calm dumb hide quit sing ages bike burn cake fees haha hong loud peak puts grab pink tall lets lock nose semi wise aged eggs ford gang lift porn sons bush coal eric hunt inch jury kong tone vast auto earn grey meal rape rush bone gate harm jews thin tied cats drew gear tons wash acid alan bars duke fort gray jeff luke math asks bath dave mini mood rank sand tape wage andy bags desk rear wire belt cops cuts jane maps sexy soil suck ugly deck dies dust rail root crap dean gods hire pray sake gary keys ross adds mill pace pope spin anna hook phil seed ward coat ears fate gene jean tube cant epic exit josh lips poll sept tear ties wolf bull deny ease fame kate tail twin boom knee teen trap anne bang cure rick bite chip dare jazz mask ruin sean cape edit nuts seal stem beef clay drag fool lisa loop mall rely sole tale wore bass butt dual gulf logo nazi odds pump slip corp dawn fits isis mars tune weed bold clip exam menu nope oral pays worn aids khan lion pipe poem rude toys vary carl dirt lazy mama shoe chef cock emma greg palm pole shed folk leaf woke aims dish duck fred hood hung jose lied nail owns poet sink skip snap swim beta cave dose flip punk wrap yoga boot bulk coin corn raid taxi bare bias bits clue cole earl grid sits soap beds jake kent lens piss thai aunt flew icon neil ours pics thou tier caps crop soup beam horn kyle lean peer pile plug bend cage disc keen mere visa blew brad deer dive heal juan pete prof babe cups drum grip mild noon rage silk urge ally lung pine pose pour sang cafe cult euro jets leak mice riot slot todd wont bros coke dump fold myth pale pets shaw toll torn hint lucy nest reed scan span tops demo doll hull rope stan bout buzz fled foul hack lamp oven owen rats ruth slim spam tent tide bolt bugs bust cope echo hart sins soda thee fork hype junk marc pill pork rays arch axis doug goat heck lamb liar slam tire warn bail buck disk hats hugh joan nato sail void whip wipe chan chin coup dash java jerk karl nude tits barn bent deaf dock feat luis neat pigs reid sore bean bump cart cord dale lawn olds oval pity pond prey ruby wade clan hers joel slap bees chen dame eyed melt oath sara stir toes trek unto amid eats hike kane lame lily plea sigh stat troy wang anal dull fare idol leap pops prep scam swap trio vibe acre amen bore buys cows dial halt monk noah norm seas hail joey lend leon mint nova seth bake fury glow lone papa reds rode sack sung toss wool yang dome dope gosh mins rack sued sums tory walt bury cubs fist fond frog heir isnt moss tens tomb trim blah haul kurt nike node sour yale beth bids cunt glen maya pros saga fade gaps ivan lads lime lynn maid moms oils outs owed rows surf sync bait bark bets comp kirk lang levy mock nina para spit yell envy heel nash swan bald boil boyd cone isle mick obey ramp rand reef sage thru zoom bats cube dana eden guru hans labs lace pier quiz tags whoa asap bash doom flee hawk jill logs memo nate nets pony shah sofa cans crow font glue lyon modi peel pins ribs rosa tick ussr vent bred curb dong evan hips judy finn foam jade kits prom sims stab chop guts herb herd lick mold pads polo prop scar vein worm cane cons crab dice dots foil gram hugo iris ping pots prix slut tina turf zach bind deed gems gore govt gown halo knox lent mesh omar pens rita temp tray cola coma meta offs rams rust stud sunk vain coil emmy flex hank hose lava mann null oops pact vest vine ants atom hulk jeep knot lust mayo owes pits rang rory tate tile verb viii apex beck calf cork dept fest funk jong lump scum tore vera akin carr gays gaze hugs hyde idle limb mack peek quad roar sank subs vows yuan aide bali bans grim mart shin taco thor watt chic erik erin mans marx mets pike pulp reel refs alas bart cite dell dent dove gala holt lays lure mist mole otto rant rash ripe sane spun toby wong acne bulb chew dime dire hare jess knit laps mute nerd pint poop spur tara theo tilt veil alec dang duel helm katy kris maze peas saul sway veto zinc brew coca cove cozy expo koch neal neon nile pest poly rift russ tuna atop bing buds dads ding ella fiat gill hash lana noel puck rite warp womb damp feud fuse fuss gale hath lena luna meth rudy vale vile bale chap darn geek homo hymn noun oaks reps soak sock tabs bloc flaw gigs grad hale mare ness poke pres yarn brit buff claw fart gaga grin heap muse rods shes spec suns baba beau clad dorm drip duct fats kung lima pies sans shri tang alma arse colt erie flux mats undo vans wary abby alps flop jaws lowe milo ouch pals pubs tame taps zack blur blvd brow cory faux indy kang kite lore lush mash plum puff slid tuck ware cain casa clap dunk lest levi ming mona nana sect vase zeus bach cues hoax lite mono numb pawn reap tidy aura comb curl dams dart feds fore howe ieee ions mast nora rave reno robe vita weir airs cass cuff ezra ling loft lois oslo tyre vets avid bert bong bows cobb docs hind hive imam mesa moth wink axle brag coco dine flap glee knob loaf loot musk nuns odor slab abel ajax ammo amos crib gwen jays jude kiev lama noir pans punt shia stew thug alto char dane eddy gail hush leah paso pear slit wand barr chem iced jeez mont peck raft roam swat tram zion apes beep boon brat bunk gasp gong heed jars lieu loch lola lows mara mens pods pong sham vols bead daft dani duly dusk jams mule seam xiii ache afro aqua bins burt cara chow dirk duet dyed elle elsa foes grit kemp limp mead paws pimp sire trey vivo bots cary defy diva flea haze hemp vega axes boob coop deco dora figs hoop malt otis owls prob rink amir harp hubs lars lori oats posh riff aces aria buns dino edgy joys peep soar begs bras conn digs dues fife geez kale lash midi rake shea arid bono comm demi dyke moan rein soho stun tack tart ting weep woes burr cher dodd duff fins hops hump itch mums afar bois deli dyer mina moor oily skye slay wasp aint bard cams chun deem elon fang hume loom mods slew swam toad viva wick aero alba anon ante dole gras kiwi limo lulu mace mane mend mitt rags weld bays berg brig dion exec fitz jock meek mojo napa pats pups quid tees volt wits barb bray cosy gabe mimi muir olga raja slug smug unix beak boar bran dips gall lobe maga nods peat ravi spat turk typo writ boko chai didn dyes edna kart mana mein meow nuke pooh tofu twat axel dune fide fray liza pore prem puke rips rosy scot situ skid whim zeal bret cont cora fern fret huts loki mira snag tote arcs bane bios borg coli dank gals maxi quay sped urdu ahem alum anus balm bona bony emit frat guam hehe hens hulu judo mach prod rama rees shan shen slum stag taft teal wigs xmas yelp aclu cong joon lakh mugs nigh orgy raul rigs ritz rolf rubs shun toro wavy wept whew bain dung glam goth herr lacy lair mani mari moot newt odin polk rudd sash sled tess tong clam ctrl fuji gage incl lear ploy puma rims tint wilt bile bled boca bose eras fend gums kali kink lice loco pave peng plow proc soma tome trot airy anew bein diff germ lien opal rung cabs cert clot gigi hays keel lewd perk redo roxy rugs skis slag suez swag tori zeke zest zulu bums carp davy eels emil gist howl klan nook novo pant sewn slur sobs thaw tout amin gyms hogs hone juno libs nemo skim teas tyne amor curt dade kern mobs opus ruse tsar ymca yogi abba amps byte dons gent hast hogg mink opec prog putt rana rife skit suzy toto turd bern cram diss doth hazy jinx lark meng ment nada nell olaf oleg phew pont puns whit acer chet eyre kilo lids lube pisa shay tele tung zoos alia cyst grub huff hunk kant leds moat muck omen perm secs sera serb woof arya bora bree dill econ goon izzy kiln mora pang sous univ wynn aden apis baja bien clit dory egos eton gust lurk mech ogre peed pell plat raps rook sine snug tiki tort vial vick ares cate gait gilt jain joss pane quot rout shiv siam tran wren yoke brie dada desi gags hobo jive kiki lass lull mite naps omni stub tact toms veal webs zeta alfa blob coon devi exes fink frau goto hola mort musa omit tbsp tron tubs yawn aloe bess brim chao copa deus flak frey fuzz gout hoof hues huey inks inns jest leto lina linn lynx mage mime nave sari sata spar stow sumo syed tins tres vail yuck beet crux cusp emir flax hiss lila mags mmmm mons morn pico ruff rump smog sues whey yuki diem fisk hajj lees macs maud yolk andi assn benn blot bode boer boos conf gaia giro hove jing mays mila puss tiff toil toon toot twig waco agar chia cree fawn gaul gump irma jolt kami keto pied pius rsvp shag sift silo sion soot tutu veer amit anil bobo chit cray drab dubs garb hula ills inca momo myra oars parr rhea roux rune seer skew twas yeti buoy coll czar eros fowl foxy furs gull lags lisp mott orcs peso pita sill tots vane yank yaya argo arty atta baku beal bibi cask clog dojo goof hoon hoot joni jour lint lira loon luce luxe mica mong mush nous onus onyx paco peri rani sher sips sora tait teri tuff vert whig arte babu chou clem fizz gory kari kors lard maia pegs riga sass supt tarp thea amex blip caro chum cote doge duma ergo gels goff goss hera iota juju leno mako naga ores quan sith cade coax cull gabi hiro jama sena silt snob wack argh auth chez croc hoes honk intl pent pomp rami saba saws shih sown tusk auld baht bobs bosh deja dona dram fags gove misc mull oust poof saad taro vide wank yous agra anno awry bask deux enid gael gulp idly jugs maki mutt orca pall pips pugh sant vive amar bleu cern chug curd dost graf mano nair ning robs taxa ufos dali dist faze gila hurl kwan magi petr rote scat snot sufi taut vern wray amal avis bene calc cath coed cpus dias dowd hain hilt maul navi oxen prev snub spew thud trad wail whiz acme acta alms arne bala daze huns lire lula maha nene pelt thad asha baal boba devs dodo falk foss gens gyro jabs kilt kona lupe maru mbps pate phys supp tien veda wort yuma amis ansi cowl deft gash hams joes kelp lain leek lute mala omer prim sina siva slog smut welt ales cede gaby hist holm koko loma pacs pars rove thon vamp bogs dens dike ilya kohl lyra nosy prov revs romp shoo tosh tugs vips atty gaol hock husk kath mads shad snip spas taka teak tuba urea abed bari bela buss cuss dibs foal gush hors ibis kota noam pout sade swab toed wane addy axed bunt duos jags juke kana kiel kino lind pele pers pogo puri racy tana weve xvii youd alle aren boas burg burp chee ciao cris glut haji hark kala merc moly nils raya sala biff bock fait gimp hots lobo miki moro nist ooze orbs orig perv pows puny roms sita tama wadi wily amma anni boro bute feta glyn iman jute lido lise loci loos neve pail pare phat scab seep sisi sulu vise wasn whoo zips asst cogs dupe elms etch gaon guan iffy parc pews wham zing amok babs cady elan firs flue huck inst juba kama kuan lino miso pram psst slob vino wart wich yams agua bate crit gung heil hows hwan icky kcal nips pari reek rind ruck shou twos waka bund debs heft leif loin nast nots pugs puja purr rafe shat sind tock barf bram cava coda coos duds flor fora init mahi mire moya raff rasa redd sacs shem shim soya toke twit ahoy allo bigg capo cmdr deva dint inez itll jure opts pere pled rath remi rots tera toga balk byes cine etta gogo hala hick hopi leed luge meld okey quin rada roan tern tink vila wean cana cham cyan dink dorn elia gees hein holi jeon lode sear seri slop sump taos urns vats waxy yule anas anda awol chub cots crim fads flog mohr muff ovid pala rota rube rusk sola ahab dura gant hypo ibid kell moll nach oboe ogle pali pyre ralf reis resp spud bade bolo bowe clio eons fete gaff kaka kegs perf pina sark sich tats thar toda trig wisp wold ably axon bede choy ghee hewn lacs mair mang masa mews nome quip saps sirs swot tora tuan vers wale xxii zany berk bide capa cuck fess fico gard iago kook loca lolo milt pima pino sawn slav tans vogt wags acct attn bola boxy clos cond corr dido doer eben etna goad grog hoya perp pyro rata riva timo tine vela aeon alls baka bani buts crag dewy doze fido glib harv haye ides keir lugs maim marg nape ohms ques reit sadr tics uric vole yore awed bana boho crud doon fume icbm kain madi maja meer mote naik okra pons qual thro tino zona aire bozo bren dais eval gris gros gurl jell loam neet saya sook teng ursa whet wile aced brin goop hoss huma inga kerb lyre miri miro narc oooo plex plop swig tash tass thos ural veep bldg cera dabs desc esse ginn hued inky laud mino nona nori pape styx tarn tonk ulta wali banc bast cair dian engl faro galt gare goer leer lipa mems nary nasi pert prat rong rukh slaw sows tete yoyo appt beni brut bung chil irks jigs jinn jura lora mudd nama poco poon rood sate sone zain ajar ashy bara batt coms elks esau hing ices malo merv mose oban piet pika publ pyke saki tobe toma abit arco enos gnaw hora jove lope marl mela pees sidi suds sura trav tuft wawa wove asta bevy dour elec exon gere hoke jesu mota natl peds recs roti shel sima sulk tali voce abut amie baru cort divi fain gape gobi hosp imps joie keck kola miao mise modo odes pais rach raga saxe trac trod weds alix bish doss eris kiri mids moir nota rapt ween agha bogo boll glum kylo manx raze smit spry talc tula whys dari dees dern dori duce giga haut knut lech leng lich loli lune mops nepa noma oryx pupa terr wiry yhwh appl cima coot dele ewes ipso karo leda noll pica rime shai teat trop twee wows xxiv acca dere fifo flay fren gona ludo minx mips prue rile surg vena wuss acyl ails bibs binh dene flan glob heer hine hums insp lata mian mils nong sasa sati torr arca babi buda cann frag gers heme heng isms kayo koda loup mone nibs noms okie ries runt scud serv sten tarr tars topo wads wast yana agen amas bier chih fila flit gnat jamb kolo koto kurd pith poss quai rupa shew soph trix akan biol clef dier fane gunk ilia jobe pata rabi taha vied weft abbe acad bool bure cals cest dato dray filo foci ikon jibe keef kiva leos lett moca noes orly ream rive soli agee bagh bonk brae bunn burl chon clin cust deke gild jarl kava keno kudo maar meso muss neem rend soir spay suet swum toyo yurt actu bint blas cuda faun fils gish hake iter maro migs moos nema neri pret vite xray abet alts beek excl fuze gins ibex juri lalo lier mete nags nett nisi obit peal saka serf suss teed zuni arvo berm bole dita doms fief gawk haar haya kike mola nein nowt pani rasp reve tite wain achy boof bord brio bubs conv duan ebbs goan habe jara leas liss mots oras ordo ovum pkwy ripa roto stam syne tala tema ywca ager ands aves burk chal craw fens ging goma kats kish nits titi vell waft ankh arum aryl blam dolt donk ende geer gumi hort jogs leal molt mung muon mura numa pref priv ruts seis tice wert yair amla ayre chol ghat gora juts kith loyd luau luff sess sula wird bibb coho crea cura debi doty fram hoey kbps lusk olof pish quod reem seve slat souk stor tain ulan ulna vill waif apse beng dorr duro empt eves fino flam gata goel guna hems jiao myst peen rann sado seif shee shod shor tabu unde vina woon alga baud bott cess crum cued dama duns emus gena karn kore mell prin rais tare wark atar bawl birt bodo boni clod donn dosa espy freq gobs grav herm komi niue nock paas peon pesa pleb rede rego saic tabi ulla celt gara guha haku jami jiri kory masc mien naam rads rara rial rima safi sapa ster toba toho toru wets zits balu daud dyad fash gats guff hoch holl kees kivu lunt moet oink prow saco sext simp supa tamp vari arak assi blab circ cush dims elem fica fini gook gree hags isdn jann loro puna sago sods suey sumi teck trin vasa vies wonk agin ayah bons ells foll huss jefe jere kora koss pato piso seta siti toph unum vali veld viol yeas yoni ainu conc dail daws dort frig hore lida mele muds plod pols rebs sett stim taku tows velo akka birk dado eire figo flab fogs guar guid kina lats leve ngai nore putz rodd sags tyro vlsi anis ayes belk bhat brum dain derm disa hasn hoar illy jule kula loll mand mktg mope mors naim pict pipa tari toit trib tush wilk ambo blok diam dich educ feck kuru lait lamm leys lill paps purl sunt woos awan bere culp dote erma fama fant fath fili fiqh geet iban inde lave luba lunn moyo murk pron riel susi tams tano vara wats aker apts crip crus curr ebon gird haft hals itsy kail khat kuku maes mown orth quem repr sime soco tawa tuts zags bens clop cobs cott dict drow edda emer hurr kaif kier kopi kori lile lilt loke mima morg muta ofer olam pred shul skol sori tope whee womp wyss alai anat arad aver bago boyo cres dbms deve durr fixe flav fons grat hout idem kame leet lobs phar posy rect sall skal sops yaks zaps ammi busk coir faut garg garo gell ione jeux kapp kuba lehi mamo nosh pock ruta smee ziff zink atma baar baga brod bude burd doit ecce geum hati kazi lede lief mulk naso repl roop rous sews sibs trow vang weal alco cosh darr dawe flub goog gyre heep jaap kaki kenn leis meas mero mony mumm pois pott quae teil thew tipi toff toko alen ansa baas bops brrr carn cran daub dopa fobs fone gams iuds jota laze odum palp pone quam retd sere syst tapu tola wint anan anim arri behn bick boma cero eggy engr floe harb hund jehu lath murr nunc oped pili raad regt roon sida".split(" "),
+    5:"about their there which would other after first think could these where right years being going still never those world great while every state three since under thing house place again found might money night until doing group women start times today point music power water based small white later order party thank using black makes whole maybe story games least means early local video young court given level often death hours south known large wrong along needs class close comes looks cause happy human woman leave north watch light short taken third among check heart asked child major media phone gonna quite works final front ready bring heard march study clear month words board field seems wants fight force issue price shows space total above share april sense weeks break event sorry takes girls guess learn added alone hands movie press tried worth areas books sound value lives round stand stuff david drive green match model trust range trade chief james lower style blood stage terms title enjoy cover legal seven staff super union began built crazy daily knows paper parts voice whose earth rules below offer sleep table truth build cases piece visit wanna wrote gives river shall speak write album eight funny peace sales spent store track ahead allow brown moved plans radio cross focus loved miles speed jesus extra quick agree clean photo scene spend teams coach costs heavy train claim goals gotta hotel judge lines named brain floor image meant reach civil dance stock worst beach ended older calls color dream grand names sweet touch doubt drink feels shown basic carry crime fully plant smith worse award block lived peter rates avoid catch coast trial truly queen stars broke glass prior royal serve types begin ideas notes plays songs twice worry brand count fresh mouth owner scale score smart throw views click faith louis metal agent apply basis chris enter prime waste weird adult grade stone users apart aware fifth items proud tells birth drugs labor lucky prove tough units alive apple bitch cards dress horse liked magic owned stick turns cells frank guide raise treat yours youth funds helps henry sites exist forms guard jones likes shoot sides solid sport steps taste facts harry hello links plane scott shape upper cheap joint signs steel steve tired crowd enemy fixed limit ocean proof banks chair homes honor noted trees email stuck sugar drama entry grant grown heads keeps lying route saved shoes smoke squad teach tests abuse angry laugh loves lunch storm actor chain equal leads posts quiet split taxes urban fault films mixed phase smile truck votes blame dying falls false fired novel shirt shots cream giant mayor minor pages theme usual voted walls draft drunk finds spoke talks upset birds cycle goods holds wales armed aside deals empty faces folks moves prize rural tools admit favor frame guest teeth bunch fruit index shift stood tight crown grace kevin rooms chose crash depth dirty error noise panel plate roads shame ships bible cable dates doors multi print sight broad drawn motor seats solar tries balls bills blind brief chest debut paint pilot steam thats clubs exact kinds loans quote swear trend yards bread inner reply tower wheel davis faced filed marks pride rough smell topic lewis pants sarah sharp simon trick audio brian chart mount occur tears argue awful bound cloud files hills jason loose moral shock thick threw angel bonus flash gross minds refer trail uncle woods badly chase ideal jimmy kelly roles wings clock label naked opens pitch pizza plain anger comic ghost newly skill solve trash virus boost crack foods hired kings knife saint steal trans buddy cares delay elite forth hopes layer marry nurse rugby sheet stops bench idiot medal roger shell silly towns allen angle clark firms forum gifts grass hence lists races rapid rocks sixth sucks valid vital bands creek fraud honey lands ratio scary spell sword waves wayne begun cents daddy diego drove glory juice logic meets strip dozen fancy holes input knock ought risks bears blues boxes bruce flood kills maria rally roots shops swing texts alert arena billy boots brave drops fleet jokes parks rings robin shake shore spots stats blast bones pound punch walks fewer grave mouse oscar piano slave craft devil gates hurts rated ruled sauce slide tiger alien beast candy cited dated fifty relax acted alarm globe hoped larry moore seeds spare bonds chaos corps opera quest sized tanks alice anime barry coins fails jerry lover panic scope stays adams aimed alpha boats brick danny gains mercy outer reads screw suits venue wages wells burns habit laura naval noble picks pussy robot susan terry toxic wider wound aaron asset baker brush essay hosts jacob maker mario ranks rolls snake tasks trips ultra usage beats bobby canal climb evans fever fluid loads mills nasty perry twist unity winds blown chips fence males sorts souls stole bored dealt flesh forty hated laser loyal patch radar villa adopt blade bucks camps cargo cried helen humor marie meals nerve sandy sheep trace bases chill codes craig didnt grain grows knees lions liver metro mines rifle rival sadly sizes slept spray suite verse acres bless chuck couch crush fears fires genre jamie keith lease shine tweet tyler blake inter maine react rocky shade teens tommy vocal yield bacon bombs burst costa hates salad sends stake swift twins awake beans blank curve eddie emily farms flows genes harsh hurry lakes mason nancy organ pearl sweat tours alike arrow cabin eagle eaten guilt haven seeks theft valve charm cruel delta julia ridge tends tribe zones cared loses pairs poems stamp voter witch array backs belly booth cliff derby draws fatal lemon polls ralph shark tales colin dairy diary drill edges flags flies jeans julie karen meter olive safer sells setup skull smash basin breed bride chick fairy freak grief lined lodge lords merit micro raped rebel tooth viral wears widow wives beard curse drain flame kicks ninth penny petty ports reign rises saves scare sunny cheat cheer chile demon elder fiber fried heels linda pulse realm rides shout alter brass crops dylan ellen graph penis pills shook stack aging audit blows clips dried jesse joins logan nails singh spite burnt buyer cease cloth eager elect kenny lloyd lobby orbit ranch socks tires trunk badge buses carol diana ferry gauge paths peers rider ruins shelf width derek leeds legit loser pulls roses sheer stark thumb urged wheat wrist acute blair civic clerk crude drone exams flour minus pause puppy slice spurs vinyl debts mates probe remix sneak spark steep straw weigh adapt bryan cohen cyber dense kitty moses whale amber ankle armor berry bulls clash glenn grasp handy lanes lungs manga poker sally scout steak sweep tumor casey cheek curry drake janet katie modes polar skirt spike toast waist wreck blend brake cough czech depot drank dudes feast frost iraqi pipes purse shane tense vegan annie chess float grind grove hobby lance locks lynch nazis newer packs risky sided sober spice swept towel tubes arise ashes bloom clown cries dodge downs drums guild isaac prone satan siege sixty sonic spine admin baked betty crane donor essex marco pasta randy tenth batch idaho mitch nixon paste plaza ricky skies stare beers bells blunt boobs champ ditch ducks fucks lasts riley scrap shaft slope snack stern stiff sworn unite vault vince wagon allah bikes crews feeds hawks homer jenny lacks midst mommy onion raids rogue sings abbey baron bunny choir fools holly karma leaks masks poles shiny spoon teddy thief whats alley boris bully burke hayes marsh messy molly ninja peaks pools riots roast salon tuned vague brett coral covid dough hardy irony joyce jumps maple relay risen stunt whore wiped youre acids aired andre cakes flaws freed halls hints ivory kerry niche porch seals utter walsh wires creep devon donna elbow exile felix goose grill johns nobel pains poets rains ruler sperm spill swamp tasty urine wendy ahmed calif cyrus decay diane flown floyd imply mafia merry pumps reset shave slots stems clues drift fuels grams hatch hindi niece scent slate surge tapes token tracy tunes woody yacht anglo bruno dolls fries intro manor posed promo pupil sands shawn spoil venus allan altar atlas clara combo fatty flush hairy horns ounce pablo seize spicy sting trent wines wired asses belle bites deeds edgar horny jared poses rails raven skins stall strap watts bliss daisy disco doses elvis euros faint fines forge hears nodes notch omega queue trout worms bravo crawl digit flats flint hairs jelly lunar nigel peach plots silva beams cedar dunno heath lifts metre norms pinch queer rover scars syrup tamil tones traps veins atoms bowls chloe dwarf leigh liner maths merge moron myths naive opted paula pedro rigid vivid aided bella belts boxer brook coats cured doyle hedge icons joker jonas laden limbs rainy salty scots serum skate sofia stray tempo torch turbo arose blink carey chang chili excel faded gangs gases genus glove grabs greed greet lamps negro owing proxy renew retro rumor stoke thigh troll warns aisle amino bleed brace choke clyde damon goats monks motto onset pixel props prose razor steer versa ample bingo brock cubic fills irene macro romeo shady slack slick stove tiles tract vista vogue adore corey creed crisp crust ethan fined flora gamma grape hangs juicy moody prank spear spies stain tidal wrath beads blaze brent carlo caves chalk flock hides hyper moist monte rabbi scoop scrub shale titan trait troop urges wasnt byron clone drown jewel obese piper scarf sushi tails timer tying waits wakes baths borne dusty fibre focal gears kathy noisy notre snail tutor verge yeast diets erase manly oxide pence percy repay ropes rouge shove snaps turks basil booze bronx chord clare cooks crest decor edwin fetch fuzzy hague herbs hooks jules kirby loops naomi nexus nicer optic panda slash stein bates baton camel chefs chunk cocoa comet dread dummy flank flare forex leone lever marty pedal query rests sewer shits smack sonny swell wards align angus anita attic await becky cache comfy condo dicks flick funky groom hogan hydro knots lyric plead slams bolts clive debit denis gamer lotus mails malik paddy paved perks scans tally timed wedge alloy cites colts crank dante decks fares linen moose motel resin rusty slips stint weary wills willy agony avery benny binge bumps caste chant colon curly discs famed fetus mound muddy prick sammy tents weber abide anton avail booty fixes hanna highs lydia madam mayer nanny piles poppy pratt raced sacks tease bluff casts cindy coded doris facto flyer geoff giles isles miner needy patty rents roofs saxon swipe tango agnes blitz burma cigar circa cloak dover dwell edith fiery gimme goofy hicks irwin jolly jorge mccoy mummy peggy purge rhino soils venom vines windy wraps blush claws docks earns erica frogs furry leafs mango oasis oddly overs paced pagan psalm rhyme savvy spree thugs vapor witty woven amend bloke blond bowel bulbs cater deity edged finch gypsy monty palms sedan slang vibes algae ariel bowie brits cathy dolly dryer ethic flair haunt hazel hyped jaime jenna kylie lilly malta slain specs stash viola waved yummy brawl bryce butts chevy clint exits franz jonah logos quota salsa swore vomit weave arent caleb cores dared denim erect fauna flirt flute matte mixes morse sails stool taxed tread truce typed tyres unfit weeds aloud boast brink cecil cobra conor ernst heirs piers pleas porto sigma spins usher annex barge birch bland bribe canoe cider eliot equip havoc humid klaus litre manny mckay milky mixer nicky pivot ryder suing taped arbor cisco cling fella icing idols jihad lapse login mimic mural nasal patel quasi reese reich sears shuts cameo claus deter diner eliza envoy fungi gravy hires meats psych rinse scalp sheds spans squat sunni thorn toned wharf wiser crate crave crows fanny freud gloss graft grips guise leash mater plugs rodeo shire sinks swung taboo tides visas alias annoy cocks grail kappa liars liter opium penal plank ponds privy siren smear snowy stalk stink swine bangs carts clamp clans ernie forks hacks hoops inlet kudos lucia mains mould noses quake racer recap shaky stout stump wally yells berth dewey edits heidi lenin malls mania menus orion parry patio pepsi pines prism renal rites roach sioux sloan sniff squid swarm taxis terra vance verbs yikes abbot bleak bogus cages cubes daryl dizzy enact fists folds gregg haram hound mourn nests pouch sexes shack stale tacos tummy wager whack betsy blanc boone broom brute buffy chung curls cyril della eater elias foxes fritz froze hitch julio medic muted nylon ozone papua rotor vitro wigan abbas agile aides carve crook darts diver duffy fades filth genie glued heats hubby jacks kyoto ledge levin melts mined momma moran natal pests piled salts starr torah torso abyss alvin arson basal crabs demos dildo elves ether fetal finer fused gorge judah latex modem motif necks paolo papal peril polly pores shear snoop tenor wipes zebra babes broth cocky cones desks disks evade fairs germs heist malay maxim misty pinky quits robes satin slows stacy tonic twain vowed binds chops ditto gland jumbo kraft louie mecca moons semen sighs slime spawn tanya ticks tomas towed waltz adolf biker butch chats cheng ching crore dixie dunes haste judas kinky lenny moods otter plato racks relic reuse scams vicar welch woken apron avant coils exert glare hefty leaps lends nerds porno rahul rapes reefs santo slump angie azure cadet cords craze dumps evils faked geese grimm hunts lowry mikey phony pluto ramon rubin tammy vicky vijay bends boxed brows coupe cures ebony folly fumes garde hikes hymns itchy junta latch libel lofty maize picky prima regal shalt sheen sleek sling studs tombs adept bowed cafes cunts doggy eerie ethel farce fling flung fudge gemma glide norma plaid plush shiva smoky solos spade swans temps vowel buggy cutie darcy dodgy ethos heals hinge intra irons mamma manic melon roche rowan seams shred synod titus vents donut garth gloom heaps hydra kyrie limbo lousy olson overt pious reins rufus scuba thine viper beige bosch bubba bulky dives emery flops incur leafy ollie piggy shrug sonar stony taper tolls toxin tudor wasps assam boils cello cesar feral flips harms hasty husky laced lipid perch sykes truss undue verde vinci wacky aches assay clair dalai fishy frail glaze jerks joked ramps rhine sinus stung whine abort amish banjo beech comma dogma emory evoke geeks hodge johan lacey leans lowly lucid mosul petit polio saver snuck timor tweak angst bison bytes ewing expel fitch frown godly groin helix hover knack kodak libby lured macho magna missy nouns potty sadie silky stair brood dandy donny eased gowns kilos leach lefty luigi mabel maids quilt sauna scrum slade snare stomp suede tiers timid tweed uncut widen braid bulge cuffs drags fonts forte fours greta kayak kneel maori nudes recon susie trays vigil waive alain annum aroma budge clout corny dukes fakes feats forts gated girly hoard horde koran lambs looms lotto lukas lynne nitro norse pesos poked proto shone sissy taker triad valor wight bathe dares doesn feces giddy hanks heinz kiddo melee merch nudge ovens payer pints pours serge tempt terri vicki whiff aunts boner bouts chico flake goons hasan herds ionic lawns lorry matty moths mover rowdy sassy silas takin tonne tramp wield brisk bundy celia crete cupid danes defer dries fidel flaps flask fluff giver gnome hades haute jails lotta lupus lymph mahal nehru palsy polka repel rohan skier slabs slums swoop telly volts waged whoop amaze chute derry drier duane elmer epoch farts fated femme foggy gator lumps magma nutty plume plump shrub sluts soaps stead vests warms whips yukon asher bagel bigot britt bumpy codex conte cowan facet fates firth floss frees genoa heres josie kinks locus moors playa posse saber samba slant soles spelt tacky texan tulip wares alden busts combs cosmo croft darby erika felon grate guido hilly huron leech madly nerdy nifty paces paine salle seine shawl slaps valet aunty baggy carte fable gabby infer khmer lager laird nelly niall pears strut swirl theta thong zoned awoke axial carat chore coles crept cults curvy filly footy fouls gents grunt gusts halal masse mucus pixie sever skips snuff stoic swaps woolf actin allie andes artie avert avian barns bayou chime delve faire fluke growl hater lobes mardi nosed nukes pasha sects soggy stoop ville youve abode aries clams dazed dinah dowry golds grids hails harem hilda hippo inept juror liang macon micah moans modal moira pluck porte potus puffy quail quirk rabid scorn vouch wafer amuse aptly autos brunt bucky chaps creme ferns groan hives hoist laces massa molds murky patsy pinto rants reels slurs tarot twigs canes ducts fives fleas folio franc gully lilac mayan mules padre quill revel rower spire spout sully vases whisk alibi arias aztec clasp crypt deems doves edict epoxy exxon fiend hoods hurst jerky licks mower oiled peeps pesky prays riffs rouse scant sheik skunk sloth soups spoof tonga trope tufts addis aloha bafta booed butte enoch foyer goers grime heron inert leung lumen piety pinot remit savoy tonal totem acorn alamo aloft amman barre beset bleep boyce duped earle erwin fared gable haiku howdy indus inked kyung lakhs leila marge munch popes puffs reddy slimy snout spank spied spits supra tunic waxed beets brine busty churn dolce faust fuses hells hunch loner mogul moles morph nicks nomad orson pubic raman revue rigor roper shank spock terre thyme toner unify upped virgo aegis ascot brill caged capri coney deans diode ester gills hertz leaky linus mites platt quack raged rages semis vedic zeros argus bosom cools delia divas hasnt leapt milly prius quark rarer samir slugs stabs swede teeny trams anvil anzac argos cabal cadre cramp decoy diced draco drool fixer foray friar fussy goody holed honed hutch jetty khaki koala leith loren merle mocks monde muses petal poise rambo rupee smirk smyth snipe stave swami trove winch amour arjun banco bantu benin ceded crock dunne erode kebab rondo saban scion sores ulcer vigor yanks axiom bello buffs chino emits fangs graze jakob janus knobs longs mince mints moray nacho reeds sabre speck adorn barks cabot cumin decal execs fecal kanji lingo lohan meaty parma quart ruddy sahib scala snort swims tamed tempe titty typos vices warts xerox apnea banda booms bower capes celeb coven dials domes duchy epsom femur gulls gusto hippy jazzy kiosk pushy quell roost shard sieve spore swain tania tenet tiled tunis vials wynne aback aimee aloof brews cajun dorms druid duvet eject forgo freer fryer gaius greco gurus hoses largo larva laude livid lotte mares mobil molar pawns primo rayon sable slush smelt stirs axles booby brees bushy calms caved clung coals criss dined ginny groot hough memos mocha noose parse petri puget punks sagan savor taint tarts tiara vinny visor volta acton alder bales bossy clots colds crumb dames diddy dived drury ember erupt evict gleam gummy idiom jaded kafka midas odors oskar panty plums pooch scour snows talon thump truer yearn caddy chasm crass crewe fleur kites maris odell odour piped prune snape taunt whirl adage boyer brash chimp dhoni edema falco flack forma galen haves hiked hiram keats liege llama marko navel payed perky rajiv siena steed astor chewy cleft clump deuce doped embed freya lures mushy ovary palma petro runny saith senna silos simba sonja tacit tilly totes vixen waugh whims wreak xviii abbie amiss bueno cuter dimes eases ethyl glows grads grits heady homme hotly layup libra modus osage pecan pings pique punta shoal smite twine twink voila xxiii yarns aorta ascii beret bogey boron bugle flier frisk gabon gasps girth mated plumb pokes porta posey sages vying walla babel beryl brats chump clove comte cysts ensue epics gecko iliad lathe micky oaths outed reeve roars serra shang sixes sodas spilt sutra sybil tuner abram banff brant ganga gaunt heave infra knoll mulch nance rerun sakes saucy servo suave tibia toads wilds xenon afoot amity artsy barra canny claps doggo dumas dykes erick feuds gauze ghoul hales hamza helms hulls keyed marys masts mirza panes ponce putty radon runes sewed snell stuns swish whiny zaire banal boned camus curie duper finns flees frock madre manus maven myron nappy nears pasty rafts riser skits slits spook stork swoon thane tithe trina barth bimbo bongo cairn campo coups crepe duels earls emmet flaky gamut irvin kiwis madge mavis nicht nymph paler prawn puree sheng soars tipsy topaz waned ahold amigo anode argon atone briar burgh cacao caper carer ceres chock comer debug ghent givin gooey halts leary libre lupin mufti nadir pimps proms raked razer salvo sodom sofas surat tandy tapas aggie ahmet atoll cotta domed drips eaves enema goran greys horst inset limes lunge prado slung surly topsy trier uzbek veils verve abner bonny bores cline comme const eared hakim hauls henna hinds indra laker lindy lough lumpy minas neath nines olden reina riled seton spool spurt sunil teary tween wonky adieu bebop bilbo corgi dents dusky fermi gaudy gauss gazed grays grout haydn heros hirst mahdi meeks minis mists musty quito raves rogan roped seedy sleet spasm stubs swath tinge yolks burly celts chara covet dales dingy dolph entre fizzy gourd grins jacky jello liber lurks manta marek mores peres pilar pliny purdy shunt stent summa verdi wicks agate alkyl ansel aster barbs canto cynic erred faker fjord flume foils gales gripe gruff imams krebs lolly mired mumps ortho reeks salve scaly scold trois vexed voids wiper bezel craps crick dunks filet gonzo graff hyena knelt lazar lusty macao manna mille milos norah pease peels peeve pinks prong sawed sloop tongs trite tusks vitae whigs winks allot amine batty betta bitty blurb chirp clays clogs conch dimly duets euler golem hares honky jeeps leper levee lurch mamas mondo razed sarin scoot showy silks sills spate tabby tatar tilts aural blimp chews clary curbs dally elude ender glade gulch hausa hiker howls irate joshi lapis loony mambo merci moped nicol rowed scoff sepia surya tabor trudy vamos varna weeps amass arian auger buoys chica chubb credo jimbo jocks lapel masha mowed omens pansy parte parti quads remus ronin rouen safes salma tawny trims anima awash boson brawn carne chien foams goths grimy islet juris laity medea midge parka posit puked slavs snore stank vidya volga wands berne cacti chaff comps corby crump dingo donne effie froth guile hallo homey irked lobos lovey marla natty pared pikes prowl quash redox rifts rishi shrew shush sited soapy spiky waver wring zorro addie agave beaks beefy boars boing coker drape fords glynn jewry laine lasso lemma orcas ouija polis redux rhoda scone shona steen tajik tamer vichy vulva zonal amiga bakes bally beaux beeps biome bough crony dicky ecole emcee fugue glean gutsy hafiz laban lanky lurid ozark pales pinus reals rollo stipe strep trill unmet agora askew assoc bicep brest corso delft elses ganja howes hunky outdo pygmy riven skids spiro tetra verso vroom zooms casks chard cribs dewar elegy evens fiver folic golly gouge kilns loins mauve mitts murat omits pacer rabin rakes ravel scape stade taffy tepid tripe vadim wests wiles anion balmy bards caked cuppa durst fatwa glyph gumbo inane labia leeks meiji niels nitty noire paola rolfe saggy septa serfs shari skeet sneer splat touts usurp utero adder algal allay bream chins coder degas dinka ghazi keita knick leger lowes mazes minty moldy ochre orang plows rivet tardy twirl vardy wagga abate adios blocs busby dopey ducky easel grist grope inlay kerri liszt mandi palau paras poach pubes sacra sappy shill shins slats speer squaw thais throb timon toyed willi zeiss bight bilge bonne codec conga daffy dicey dulce enrol griff jumpy liens loath loopy mused obeys porky poser pylon refit roomy seeps spina terse tonto wench brags casas chaka clank cushy darin drago farsi gaffe gavel glens hoppy karel ladle mensa phage pumas punts shirk solon spiel spunk swank tacks tilda torts tubby tutti twill yawns agape altho anise ansar baits cilia cinch colic devel dwelt frets gipsy glint halos kemal lidar lopes mamie masai mitra morin oldie parra pelts rajah recur ricks sault shams sired sitka snags snark stews teton trawl tulsi waxes yucca abhor alban atmos bared carpe chiba choco dawns dilly dings gauls igloo jiffy lofts lucan mamba mossy nagel pasts quint raspy ripen serif spiny sturt swabs tangy tuber welds affix afoul amara bunks clang coped dinky dobby foals glebe karat krill liven mages mitre naira oozes pager peele rance rumba saree shaka skiff tucks uhuru vivek wrest blurs clink doers dosed dregs expos facie fells gloat hokey karts layne lisle luger mammy matti mirth morel oomph plebs prost quips ruble snarl strom taiga tulle twats wowed albus amply aways bevel bodhi brava chink clack covey crimp debby feely gazes gilly gizmo guano guava hoyle husks kondo magus mikes pacts pithy sagas senor swamy tomes toots unsee washy wierd wince birdy biter bloat boden boers bolus bursa bylaw chums crone decry downy exalt frith halve hecht jaunt khans knits levis louse mezzo nawab pangs peeks plies rabat rears rebut saran scrip sheaf snobs tanto tater thule tiber tints wicca alway axons bests burka cleve cours donal douse glick gowdy gusty hagar knell locum logie nooks ombre snide sowed tarte uriel vamps vespa vesta wishy aline baldy bidet blobs bodes capra cased cates cocos corky dinar ditty droll fader feign harps hayne hooch incas kooky leery lobed minot nanda ovate peasy prude reams scabs soaks staid vocab waded anjou anova bazar corks druze engle etude fleck fossa geist hocus hosea hsien hymen irena irfan knead laney lemur lieut liken loons meath missa mumbo narco odeon peony pocus poops quant rebar retry sleds smock stags staph thins torus uriah vinod wahoo bails bawdy beaut begum catty curia fides hasta henny holla humps inigo lally laver meted miser mises myrrh nazir pappy plied poppa reedy rinks rooks roque savin segue slurp tryst tubal twang whorl wordy arras bandy bendy bogan causa cower croat cubby dikes dimer flail garbo hammy herat janes jawed kenai larch milks moxie neves nizam nodal nosey pecos radii rungs seder spake stott toddy turds unzip writs altos anker batik bibby dovey evert gyrus hetty hunks kashi leche miler pokey sarge shree snafu spitz surah taupe testy trios usury veers aesop appel belli betel betis blume borer carle chomp cubed cuddy culpa divan dixit dozed fasts hosed infos irani liana manet muggy passe peppy piotr pucks purer quays rebus rosin sangh shorn slays synch thorp tikka treks undid zaman antsy boozy bruin chine coons crags crain creak datum dinos doric essie exude feint furor gouda illus karst lordy mongo pater prion profs roams sires sivan skimp toons unwed wilco wooed zippy campy droop ignis islay jager jakes jerez lamas leste lindo machi offal pardo pyrex sabra sambo scowl shied sooty terns untie wifes barba bares boney butyl chars dewan dotty droit dunce elope getup harpy hight knave lanny lauds mange matey motte paves preys raved sakai sayer scrim taxon testa vapid vivre annul bijou biota canna chaco cobol coves cress damme egged flyby guppy izumi kendo leven lusts neigh nikko ogres oriel radek sabin sager sippy sulla tippy turvy whelp whizz wooly acker ameer ashen augur balsa beady betas blurt bongs borax canis cokes crips curds doozy drawl dupes grubs gundy havel hazen hondo kalam leggy lithe mingo nyssa piney pulis riche sexed snook strum yucky aedes arses boles bossa cheep colas djinn faxed hamel joust letty ovals peaky penta preps pudgy ratty satyr spuds tosca xenia zilch afire aggro akali albee apace arles becks bogie breck buzzy combe coops copes dagon emote gault glial gnats golgi layed leben lifer linky manse melba morro nandi raghu saute skied slyly spars tills trine uther volte zetas allis ambit avast basta belie cajon calyx codon corns dayan faxes filer goner gongs grata haida hoots kiddy lexis locos mutes novus nubia paged papas prise purim putts salva scuff sibyl sikes spats spews sucre voles wails amide basso benjy broil bunga carli chowk claro dansk dears didst duomo forme frack frere gruel ident idyll janos joule kissy kneed larks limos loach mungo nonce pally param salud selah shure syncs tigre tuple unlit warps wisps aught belay bloop curio endow falun firma fosse gluck jokey krone leant lidia livre lysis manes mooch murph musky panna pharm rager robed sated singe sprig stine sways tarry afore alums artic boggy conic crier dines dower festa ficus fieri genet ghats glans glues imbue jaina jinks junky kilts milla mutts ovoid perla pitta plait roxie seers shyam shyly skint trike trots wispy ached adela argan begat burbs circe clift cutty dowdy ennui foamy hants hissy meuse omani pacha paean punic rayed sitar smuts varus wryly yazoo zesty accel botch brite chafe clued coley coots cowed croak frizz ganda ingle kevan kiowa lefts mealy panto paseo purrs ricin rimes saris slags taber trice whist woops woozy albin aleph aphid areal baste beget biddy blare cagey corse creel daren delph ducal echos laure ligne maida maxis minos miter nobly phill piste polyp pried punto runic sedge smoot stile stunk tambo ulnar umber umbra vagus atria balor blips buxom dirge dowel dozer frist gassy humus hurls ingot jammy kraut motes nippy nobis pavia pouty sence slink snead talus tinny webby acrid auras beefs benzo bigly bindi burge caryl clade cleat dells dross fibro fille gayer grote gutta hanky herne humic lamia legge linea marci meows mylar oliva rummy sheva shuck sigil sooth stilt weedy zulus adlai andor bussy calla caped doria fanon gibby hanif horry hulks iliac impel inger kapur kiley malts messe oases oiler sacre sider soler spurn tarps wrung zilla agron brier burro capel cholo comas cooch coppa goldy gorse helio herve kamel kazoo ketch lossy monad phlox pupae rebbe scram sours strix thein tonka tress wilts ameen ardor baloo batts canst copse galls grice gulps haman heald jebel kooks libri magog oozed opals ophir parsi punky reaps salix sealy shute skein stele sumac telex tozer venal wanes weepy yerba yodel allez antic asaph autre bated brack chola cissy compo conus darya dryly elihu gomer hobos imago loris macaw manas manos medio metis nahum norsk pekin priam prods roose sinew snubs spect stang sulky tilak tines yoked zakat bardo barmy biles cluck coman dumpy egret equus jeers jukes licht mazur meads pinup ratan rinds scamp shuns spica swill telos weirs ahsan aioli aspca banca beano biked blain boric bromo carbo chace dongs ferri frill gilts hovel kriss leman meany mimes mitty molto mulls polos scree sorel abuzz aller amble bahar blots burry caddo coked dobie dunst extol gunny hadnt idler keels lanai lochs loess opine ostia paisa picot prana raper rater roshi rumen russe smote solus soppy stupa vanda vanes velar weald wendi yogic abled agger basti benet bogle boult caulk coffs coram cored diwan fagin fetid frosh groff grump gyros hoary homos hoody jolts jussi kongo marly matin morne mucky payee peaty phono redid regia ronde samaj scull sella squib tapir udder waken agata awacs bache bitsy borel dusts finis fount gaels gamba gotha grift incan jacko kafir karoo lense maire mende metra nixed paled pampa pecks scarp shoop skews soled soupy tings toros wazir yogis youse abuts antis balan barat belch birks cento doled engin glace harts issei josey kaaba lulls marts matta oromo panos peons pubis rhein sasse shoji swire swizz tanga tapia teats theyd tizzy twits welts wombs alois baler bocce bourg bunce burps chama chert claes dayal deign elfin fazed fultz galas hards hones josip lavas meech melia negus rajab spink suppl taluk upend viner amici async clave corvo cronk dolor domus doyen elric eyrie fayed flout fumed galli gamed hubba hyoid joist kohls lites macan massy moats moult murry nappa nervy parle porgy radix repro saner snips turki ulama veuve aeons amani aurum balms bande boras bulla creat deism douma genii gowan grama hooky khair kisan liane loran necro octet paise perse recto sayid shahi slobs abies aliya asana atman attar banga blick byway casco clunk croup crunk dippy ebbed frond gekko gored hadji hansa honks ilium kerns liger looky lysol manis mesas mudra nobby pudge pulpy ritzy rives roker setae sutta suzan tench varia anent beira bluer burrs carib danke devas divvy feist freon hacky hinch homed hotch jiggy justo katha krona limps loamy mazel mendy minny molle mulla noddy nudie penna podge pricy quire recce rubes salar salat strop surfs tsars wrens agers aglow aphis arius bando bluey bogue brule carty chive chugs contr cordy cyclo foots grebe gules guyer haver huffy julep khadi kling kurta marga newts nomen plats ploys riles seely sensu slims softy spall stoma swash tamas tauri thana torii towie welly weren wrack wurst xylem axing boons briny casus croon culls cusps dancy duals duddy feria feted fonds gaily jinny lippy llano maint matzo modoc perle piezo pored sadhu stour takao tanna tarde techy tinea veena waker annas benes biffy capon digne fiefs fluor forst gally goofs gumby helge hoofs indic jours junks knorr kutch mafic malus meese nihil niobe oleic peart pisco pleat pukes raver selva serio sisal taels tatty tengu tenon thaws tilde wades assis auxin baile bryon caird caned chide cobbs cruse fawns fowls grete humph melds mosey muffs mutch nazim peavy petre picea pinal sieur surer tanka vetch aerie aleck amrit antar atlee aubin bucko carex dirks doted duras emden fakir floes flunk genny hexes honan hussy lamer naoto oxbow pares pilaf pongo scald senza sower swati tabla tansy ursus vives archy babby benda billa blase blest bourn brims cappy chaya chook deers dione dooms douce gauzy gluon gotch hagia hajji huffs kanga lande lovat malam matsu meles milch mixup moise ponca preen revie suomi swale swart toils tovar accts antes aoife beata beery blued bundt bunty chiao chron copra cotes dacha daman deeps drang eland halas lairs liman natch pails plonk polit pupal sebum shaul".split(" "),
+    6:"people should really before around always better little things during school family please second number called having public system person change enough making states though season trying united course health within thanks others social single become coming office almost taking anyone matter pretty friend saying wanted months series either future police rather reason report myself living behind market former street london chance father across action moment mother energy played points summer killed strong period record common likely center county couple happen inside issues online player return rights higher member middle needed result answer design policy church longer worked became giving ground source follow amount league groups review cannot looked august itself attack entire french turned choice events simple simply career figure modern forget listen access europe george recent seeing growth places charge create effect except moving weight double expect island normal credit female nearly region travel beyond forces minute nature unless canada income levels posted safety sounds asking friday search author centre german global leader letter nobody sister annual battle degree france sports stupid active cancer master russia wonder africa effort impact latest passed secret senior spring sunday anyway bought choose direct easily finish indian caught closed damage doctor notice highly winter advice broken caused helped nation prices theory agency camera status claims coffee flight murder showed accept actual appear eating losing mobile opened placed robert screen signed speech agreed bottom cities demand engine famous raised square thomas forced fourth mental missed mostly photos remain starts acting budget estate failed larger seemed sexual target animal memory served silver spread supply artist method monday option prison senate window winner christ handle indeed leaves movies spirit videos decide dinner thinks bridge garden israel length skills easier fellow volume beauty buying corner driver images mexico paying unique bigger injury lovely martin models offers stated closer honest issued joined orders reduce stress houses picked pieces plenty prince proper toward useful valley awards flying museum plants remove afraid border dating ensure filled forest labour powers profit bodies launch listed native survey update writer yellow ending formed planet shared taught adding allows appeal boston device factor golden hoping lawyer muslim pulled values walked jersey sector strike studio owners taylor twenty debate escape faster ladies lights secure talent troops causes forgot scored slowly stores vision begins crisis daniel editor orange signal stream talked voting bright brings chosen desire guilty humans jewish medium papers stands ticket unable fields mainly scared shares switch threat adults affect danger dollar dreams fucked gender motion saving branch brazil heaven random scenes afford andrew assume bottle cheese detail harder parent prefer scheme unlike weekly assets button combat crying excuse expert latter mining object severe turkey victim agents amazon arrest attend carbon circle deputy earned headed manner nearby origin relief retail surely client driven empire linked manage soviet weapon widely deaths hardly height hidden marine pounds reform sample stayed sydney wilson breath decade edward joseph rising singer campus comedy covers defeat jordan wealth facing fairly marked miller racing shower visual barely colour fought gained junior korean repeat riding sought exists finger guitar howard ignore pocket proved rescue soccer stable tested defend extent format gotten killer lesson limits loving mirror nights belief breaks colors courts donald server voters babies castle finals formal horses hungry losses palace passes phones rating select silent spoken suffer temple tracks waters deeply harris hearts legend muscle shadow thread avenue blocks boring copies crimes custom denied drinks horror locked output pushed reveal scores speaks stages worker assist behalf dallas flower guests handed hockey judges morgan moscow prayer racist rarely struck walker arthur aspect banned bureau cousin dragon lately lowest remote repair stolen titles actors buried butter decent desert insane obtain poetry recall smooth string sudden sweden thrown abroad bother fallen liquid makeup narrow refuse serves arrive belong berlin bishop kicked oxford shaped styles thirty whilst gordon honour hunter kansas legacy merely regret remind resort settle tongue argued asleep austin engage gaming regard salary script walter writes breast carter cotton expand heroes inches johnny luxury lyrics ranked tennis twelve virgin voices wishes extend occurs reader column commit ethnic foster genius priest proven reward wooden brands duties frozen guards hiding invest jacket justin manual purple tissue trends trials versus boards burned checks define domain edited favour giants packed praise rocket steady stones symbol toilet treaty triple viewed affair agenda deeper enable equity graham invite madrid oregon partly phrase racial regime rivers rounds shield summit throat visits wisdom funded polish ruling tables timing worthy bloody counts drives filter galaxy grades greece intent knight mature philip spaces stocks submit allies copper firing margin murray stroke topics trains vessel angels autumn backed cooper fiscal mutual pursue ruined terror waited warren errors garage hosted jumped loaded lonely oxygen pissed powder quotes racism refers sooner spider wheels albert bullet divine export gather landed nelson oldest poland relate sacred steven tunnel unions burden casual denver hiring laptop parker recipe rubber serial strict worlds cruise delete eagles hotels oliver outfit permit plates safely shirts slight backup beaten bitter clever clinic excess habits hawaii holder meters quoted rolled bronze caring depend eighth resist solely trucks wright alaska albums beings beside census dealer deemed ethics fights poster routes samuel slaves themes turner wasted cancel carpet cherry gospel patent pupils runner stored victor warned watson barrel boxing cinema comics gentle layers metres notion trophy unfair bubble buyers casino charts clouds deadly hammer hitler laying makers parade planes retain saints sheets blacks cattle farmer finest grants harbor harvey inform jeremy lovers minded morris norway rachel strain tackle tigers traded tricks urgent wallet aboard accent dining immune norman nurses patrol pepper scream stairs sticks syrian tattoo trauma breach cheers closet dishes dozens fitted iconic lesser murphy nathan rookie stuart arabia banner colony divide easter eleven entity jungle linear pilots resume sealed chains cooked dental freeze humble hybrid mixing openly parish potato potter throne warner brutal dennis facial hunger import lifted mighty novels poorly purely rental titled washed advise carlos dakota fixing heated indoor intend lasted rogers roster statue tender vacuum agrees butler dublin essays fabric gently hughes labels laughs layout pastor poison prints solved subtle tastes throws tragic adjust allied assess basket brains bucket burger chiefs cookie freely fruits matrix monkey nicely rebels shorts valued wounds assure bailey ballot filmed guided guinea holmes panels proves queens ripped sierra streak treats whites booked clarke detect diesel doesnt filing hatred median rabbit raises ranges retire rhythm savage speeds stance static subway tablet thesis argues blonde brooks collar comply creepy donate finale flavor floors gloves harper joking lineup nevada newest puerto shitty sketch smells sunset taiwan trades aliens arabic arctic chapel differ flames harold hudson insist kidney ladder modest motors reject seized suited tribal tribes varied anchor angela bounce cannon chairs diving duncan fisher fridge fusion helmet idiots keeper namely nerves palmer ritual stakes towers enters frames insert liquor messed nephew prizes rumors salmon seller shifts timber travis tweets upside wolves abused amanda arnold banana behave borrow celtic demons escort firmly geneva kindly leaked locals louise noting organs outlet pledge portal shades wished alfred asylum bernie clause dancer denial fossil guides infant insult julian liking offset riders robots roller shapes skinny upload vector wicked absent atomic circus claire delays expose hazard intact intake martha medals needle ottawa porter rushed scales sequel slower vienna admire autism grande jackie merger priced quebec resign apples canvas canyon closes cooler employ judged marble monica pillow pirate puzzle rapper sharks shoots sprint superb theirs traits tricky viable absurd adrian ballet binary builds critic doubts herald hollow kissed locker metals munich pencil pierre plasma punish reagan rivals spends spouse waking admits cement citing curtis feared locate masses motive newton oppose postal refund robust storms themed varies virtue zombie bundle costly cycles darker davies enjoys ginger mentor miners occupy pierce pistol shells sleeve tenure venice wizard athens baking debris exceed fierce garlic heroin hooked impose joshua lounge polite romans runway senses sensor sharon smoked topped trails venues aerial albeit amazed anthem carson danish exotic glance hebrew parked refuge ronald smiles sphere stamps thirds turtle verbal vocals angles armies blamed bosses brakes burial chorus chrome cracks dumped esteem framed gibson lakers leslie peanut theres titans unlock aiming alumni awhile broker emerge gifted liable misery module monroe mosque plague plains seated traces voyage weaker willie yields andrea bomber candle carved clutch ghosts gossip header lining luther manila metric naming opener ranger rented robbed verify yearly blades cables chicks crowds damned graves hiking learnt marker repeal sodium breeze browns coupon curves fringe greens honors legion lethal lively manuel mickey mortal panama pickup prompt radius scroll smiled snacks snakes strips sucked thrust trevor cowboy forums misses popped spinal spiral splash timely tomato hating heroic knives marina milton owning rifles sights skiing typing violet afghan convey curved donors gandhi humour inland inning olivia overly phases sorted staged wholly apollo basics calvin capita cheeks decree endure enzyme fraser hacked joints losers louder maiden nickel pardon poured relied remedy replay rooted spells tagged vagina verses absorb accord albany archer barber bricks ceased coding dubbed kindle melody relies ribbon rotten suburb temper arrows boeing burton caesar coffin eugene evolve filthy ironic lacked madame maggie marion picnic puppet sandra sticky traced trusts vacant warmth buddha copied dances darren devils fuller gamble latino loudly modify pumped remake shrimp slopes tucker vendor abbott banker bodily buffer cosmic depths drawer drones durham exempt floods folded ideals melted onions paired parody parole python render sailor slides tenant uganda vernon biting busted carrie cursed doomed felony floral lenses memoir miguel nailed packet scouts shores softly stereo surrey trader velvet viewer whales alison behold biased brooke bypass claude corpse darwin dawson elders gerald insect neural oceans pushes reckon sparks sussex swords tories twitch voiced warmer yelled armour attach eighty finite gallon greedy majors mortar noises tended tossed unsure waving alexis beacon bounty cereal chased clergy drying dwight elliot equals erotic falcon favors folder groove kisses learns lionel newark potent psycho ranged supper vanity violin analog arcade asthma aurora castro crafts denies fluids franco gloria grammy grapes magnet notify patron regain revolt sacked saddle shrine shrink sniper sorrow taller thames thrive unpaid auburn classy clicks deluxe ernest flawed forged genres grease greeks indies michel mouths petrol royals slogan steals stefan strive thrill tonnes accuse badass barred boiler convoy cyprus digest hooker hourly irving litter ninety posing richer sailed salute serbia sleeps slowed tactic teresa upward wagner wildly beasts beware bikini coping cutter daring deploy genome grains gravel haired hustle jumper oracle peters quartz rulers santos sidney sophia stella tasted trench wesley abuses avatar bumper coated eldest exodus flyers ghetto housed lastly midway minors plaque poetic preach purity ramsey rhodes scotch sewing stalin stigma tapped thumbs tinder truths weighs willow addict bengal boiled bounds breeds danced defect faults gerard ransom revive sleepy staple strand urging advent bakery bunker capped coward dammit depart fucker gladly govern hacker intern judith merged merits mormon orgasm parcel prayed rafael reside rodney savior scenic thighs tipped tuning unsafe wander assign bonnie cliffs crunch debbie demise digits forbid healed herein jerome julius kuwait lester marvin morale paints pinned ravens remark roland scares shaved soaked spears swings warsaw artery bamboo bombay evenly gothic hamlet herman hugely jessie laurie logged masked monaco morals prague raging satire shakes speedy spying torque towels alicia births cooled corpus fibers kitten lender lisbon morton mutant pillar rapids romney screws serena spared stitch sultan thirst unused carmen conrad divers edible edmund fowler helena holden inputs laurel lizard naples podium ratios rigged safari scorer seldom slices squash styled warden whisky yogurt alpine assert bombed canned carrot donkey elites esther faulty gluten humane lawful leased mantle mascot rapist ridden sexist sweets termed trolls tucked tumors vastly wisely arises barton beaver boasts buenos caller cavity fading famine granny homage invade payday pigeon pseudo regina rotary rupert scarce storey tailor unrest unseen utmost waiter youths attain benson cellar champs climax condom consul crypto dexter dundee elaine europa evelyn extras fences fooled hereby hotter isaiah knocks lawson meadow mystic oscars poorer quarry repost rugged shaken sheikh shines stared strait sylvia teamed viking weaver yankee archie barker billed browse cortex drills echoes fetish fluffy jailed jasper jewels juliet lumber rested sermon sloppy sponge steele sucker unreal upheld valves wicket zurich airing begged bushes cartel caucus cheesy citrus clocks drafts emblem geared hindus hunted influx kernel larvae mosaic optics orphan peyton rotate adhere alarms baltic bruins crises edison fueled hassle hector invent isabel jockey kenyan offend pamela reacts riches rubbed seeded sergio skirts sliced stokes summed winger aleppo alerts amidst batter baxter braves calmly clears freaks fronts hanged harlem hoover induce mister safest sheila sweaty tanner truman walnut ambush amelia audrey aussie awaits beirut blames boogie booker canton cloudy crater drains dramas fulfil garner graphs heater karate meteor plural reggie scaled sewage sitcom spices summon tavern ulster unesco uneven angelo apache barney brewer buffet burner charms chores colder covert cringe crosby dagger dipped elijah expire inmate kaiser kettle lasers menace misuse nausea ounces oyster pearls raping reboot saturn sawyer shouts softer squads stroll texans tucson almond amused beetle camden choked dalton devote fungus havana hilary madden marrow pastry quirky recess redeem rocked runoff shocks snatch somali spikes spooky subset syntax tandem tasked tokens upbeat usable vulgar waiver wiring ashore bonded brenda briggs canopy dosage finely fluent gareth gotham halted harden horace joanna morons mounts nicest nordic piracy reeves reigns sexism sneaky socket starve toledo uphold zoning approx benign bleach brandy cheeky cosmos derive fandom jaguar outlaw stalls stripe ankles avoids badges bridal buckle bursts chilly chords clowns cradle crappy dayton fellas haters havent hitter legged mailed mantra mapped marcel mating outing peaked primer router shovel splits toxins twists alonso attire barley bitten blasts braces bumped catchy cheque diaper dudley durant erased hailed hiatus lahore ledger lodged myriad neatly paddle parrot pixels plunge rhymes sanity scotia sergei sharia siding stacks suites tariff teller theyre trance weaken yorker anyhow badger banter becker bidder bodied bowler canals chunks dearly faggot francs goalie harmed hopper innate kidnap pisses revise stoned totals waived aspire buster connie doping funnel grumpy halves joanne manned marcos mercer miriam ordeal piston pollen raided reggae teaser trendy trivia trumps vortex warmed advert asians billie bowman brunch crowns dialog feeder floats jurors magnus martyr onward petals plight relics sesame shoved sicily slater stains stormy arches candid crimea donuts dorsal enroll gadget glitch graded greasy lotion mayhem nipple pearce plated radial realms regent rovers slayer smokes uneasy unfold vested wagons ageing aiding canary cheats clumsy faking freddy frenzy inject lashes latvia lowell orient outset parted reflex riddle rubble spaced stoked sturdy tanker villas winged wiping bearer chubby creamy dustin fiddle glossy hauled hostel hugged lagoon mildly mocked oswald petite poised probes rumble saloon slated stride sulfur suzuki trough trunks unjust vivian walled whoops zambia ascent ballad banged betray chills corona decker devoid divert facade filler fishes frying helium juices lavish libyan merlin morrow mozart muster noodle paving piping proton psyche reopen selves straps talbot turret virgil voodoo wilder biking boosts boxers climbs coarse depict dotted fresno helper hurdle jeanne kicker leaned leases marian mayors nodded novice parity poking quincy radios ripple seeker sirens solemn sprung stacey sugars taxing trojan tumble untrue zodiac anders barren bender buzzer cactus chants clones cohort cuddle darius echoed elbows embark fender ferris fiance groves gutted hinted hoodie insure joyful nobles retina sahara scrape sherry smiley strife thrift toured uterus wrists albion cabins coined deacon debuts encore freaky futile genera glands gloomy gritty hinder hobbit liners magnum mashed nudity pascal pickle reborn robber rowing rupees samson scraps sharif sinner skulls spruce tumour utopia vanish abrupt antics antony barrow blouse botany cleric cougar creeps cutler donnie exited flakes gemini gutter hearty madras nearer paused penned phoebe resent royale rumour uphill wooded annals bandit bazaar bianca brides cigars coasts cobalt crispy curfew douche enlist exiled fulham inward jarvis johann lessen loosen midday opaque pelvic porous proofs pulses retard risked rustic shrubs smoker tiring umpire unborn undone wrench ankara barlow benton censor cheney clover coyote feudal fleece fodder fumble herbal hippie incest infect lowers payout persia rarity realty soften sparse tailed tyrant wastes widows wreath awaken berger bonnet bourne casing dwayne enamel giggle golfer heresy herpes ignite janice maroon muffin nigger olives pacing palate ponder rattle repent revert ridges saliva spence spills stunts warped webber whores acidic angola blends cooker crumbs cullen curled devout eileen embryo ensued fiesta glazed hinges ingram jammed lizzie loaned malice minnie myrtle parlor pebble peeled pizzas pricey prized rector ridley rocker romero sinful sweeps tyrone uncles washer werner afloat airbus bailed blooms canine carver causal cranes cutest dreamt eroded flowed gideon glover grieve grimes grudge hectic hooper invoke joyous malawi molten phased quotas racket saline solids spoils tilted treble weirdo adored amends annoys biases binder calves celery cramps eaters eureka gunman healer hurley ludwig margot medina mellow nassau oilers perish photon potion primal psalms relish sensed skater stares taipei teased thorpe towing untold upsets vaughn winnie wrongs aubrey biopsy briefs calais chunky clerks contra crease fleets fungal goblin gunner hopped indigo linger mammal muzzle pacers raider rained rebate routed rushes salads shelly steaks strung tendon tracey uptown auntie blinds bribes cadets camels downed enrich fiasco flares flores footed fright gilded hubert kinder orbits orchid piling reaper starch subtly surfer waffle washes winery zipper aching arrays audits beards cairns cassie chilli clinch denote doodle draper excite grange greats hangar hermes julien kelvin lemons louisa mirage muller occult opting ponies repaid shafts skates smelly solves tights tobias tubing yvonne ardent arenas blaine boldly boomer booths compel crates darryl dashed diablo finder harass hooded horrid jacked medley misled phoned recite refine resale retake salted shabby solace spoons squats squire stills stoner tacoma timers tinker uptake waller abound angled barbed blazer blower blurry camped crotch dharma distal ensign grader hedges heller injure junkie latent midget mutiny picket quaint richly serene shaded silica simmer smokey tanaka thinly tinted undead unison uplift vulcan adopts apathy basins birdie blanks calmed camper carole casket convex crouch curing daphne dismal dismay dodger etched excise facets fruity graeme guyana hamper kinase kosher licked morbid motifs outage packer pelvis puddle reload revoke shorty sirius snails spores sunken veiled welded wiggle athena attest avenge bikers bolted ceases easing extant farmed fathom flashy floppy inhale lament navajo nectar pastel payoff selena spines strata straws swedes taurus thorns tracts troupe widest yachts apiece arched ascend blight chewed cleans deceit durban enigma gaelic gladys grassy hanger jargon nozzle peeing rabies refill relive reuben rewind seduce skewed taping tester tickle unload upkeep volley warmly wilbur basing bowled curses domino dreamy eiffel franks gunmen lyndon messes molded nebula nguyen pantry pedals polled prefix pueblo pulpit ripper shaker sludge spiked staffs stiles unicef worded armory brodie carmel ceylon chases choral creams crooks cyborg galley grover haunts jesuit levied litres lodges madman maniac methyl mounds padded padres racers sabine saigon scrubs sevens sewers shaman squirt takers thingy versed weiner aswell crafty cutoff detain disarm entail feeble gazing harmon hermit jennie jingle laguna levant looted medial mellon mingle movers outcry pauses purest queues scotty sender seneca septic shamed skiers slider smiths theses vertex vowels affirm alloys andhra arisen booted bubbly bummer casper detour docked equate faiths fondly frosty gatsby hooray linden manure millie odessa operas payers rancho revamp rodent rudder seaman sizing sprays swayed unveil vaults airway avalon balkan batted carton cayman chests comets confer craven deepen devise fibres gaping gentry gregor hounds iodine liters marcia milner nuclei oculus ornate ousted raffle ragged recoil rejoin relays sauces sneeze sorely sprite stinks sumner touted tracer turing watery weasel allege bagged basque biggie bruise cahill castor cicero concur deport dilute draped hookup inline lucius peking picard rename rhinos shaggy shrunk sitter soothe swears tamara tripod ursula anemia bakers barons beggar bouncy chakra conner devour digger dorian doubly duluth dwarfs embody fabian garnet gorman humbly lauded passer piazza pranks ration sabres shroud slovak tarzan telugu weakly wiener agatha brasil carers cliche cortez cyclic dynamo elixir emmett eyeing fenced hordes ithaca kennel mortem napkin neuron nugget pitted pleads propel rosary saudis sheath shreds sparta stalks tycoon uproar aisles allure ariana bertha bowing brewed buyout caveat caviar clique cranky edging emilia entice flanks goethe hester hornet jigsaw lander lilies monies orwell primed quaker raptor ravine raving sickle slavic starry swamps thrash tutors tweaks unites willed zenith abuser arming cantor carney cordon crazed cuckoo cuddly danube dumber grouse impede louvre medics mohawk murals pandas peoria quests refute spades spleen stuffs thrice touchy unwell vacate yemeni astral astray banded bathed booing bummed chaser diners duplex fatima goldie juries napier planks schema sighed sonata sugary tanned urbana veneer verona armada atrium breezy cipher condos dobson dodged evoked feline fickle flared forage gallup gauges grated greets gunned hubble incite jagged josiah lucian markus orally pallet scents slutty sprang stinky stumps wedges alters bethel bowers celebs defied dusted exhale farley fergus flurry frugal galore graces groovy gurney hickey hijack hikers levers lister loathe mantis mimics notary perils pointy renown salaam sanjay shrewd slalom solder sprout stench stings tellin topper tuxedo yoruba astute bashed bennet brazen burrow cashed caster crores dispel edmond elicit flimsy footer gambit grille hearth homers jagger kieran livery loader medusa nazism nellie oblige paulie pellet phobia rebuke seater snitch spoilt sporty sweats tangle todays topeka whence amtrak beater bhutan borneo brutus bugged canons caters cloths crisps cursor deduct dunlop exiles fairer fresco glider harman heyday impart lumbar maison markup marred motley mowing nieces nuance plough reused revere steamy swells tenets tiered toggle ulcers unwind unwise wrecks ailing amazes bertie bitchy bowels cavern cedric cocoon creeks currie debtor derail dreary evokes fished flicks guilds harrow huddle hurled keenly lesion morgue mullen netted octane octave oldies purged scribe sentry sexton strewn sutter tinged tundra unruly vegans wearer aortic banish carlin cloned cloves creole cystic dainty damnit eczema equine faucet feisty fouled hinged issuer lancet longed muriel nimble otters pegged planar poplar purses quorum rabbis rarest rascal reared robins romano sledge subbed thence trashy unholy upland adrift alleys averse barges beaded beagle biceps blanco blokes breton castes chalet chimes corals corral cubans decked downer fatter fedora hearst impala iraqis lambda libido pundit purify ringer rudolf saucer slough soared subdue suisse thwart ticked waging worsen albino azalea barter bessie bistro bribed callum calmer crayon deluge desist doable errand fervor fifths globes gunnar ligand meager minion niches punter shards shiver sinned somber stools suffix surges tremor vetted wading waning woolly bibles bleeds bowles brooch canaan clamps covent curran defies dredge earths escrow horned horner milder mulder nutmeg obtuse ported rammed roscoe rubles shoddy sleazy sneaks spares tahiti tarmac unpack vetoed wilton assent bagels bigots biopic bloods bowser braced cheung collin corset curate dawned dorado dugout ensues fewest flirty flocks frauds gallop latham martyn masons mixers nested parton pointe pricks priory racked roared rowley russel seamus sickly simeon smacks stingy stuffy tensor ticker trusty wobbly wraith airmen banger basalt buzzed bylaws coughs dazzle decode dieter duress earthy elects eulogy gambia godwin grower hottie juggle levies merton mythic obeyed osiris panned papacy pasted poodle salons saxons shahid shrugs spiced stoves streep stylus suture threes tuscan vapour waxing weller wither wobble acacia bovine braids canoes centro cervix cheery crusty dialed ducked enmity eyelid ferret fitter garvey gassed gilles grocer lashed marlin marsha matron mutton placid quinoa rabble raisin remade schism sepsis snappy spicer stanza tropes uranus abject afield alight armpit backer banked beamed bluffs bugger depots doggie eskimo expiry ferrer havens hernia hummus lawton locust looney malaya mallet mather medici minced mishap nepali pompey reread rogues savory shalom soleil sowing sphinx stifle surged unisex wicker amulet arcane assays astrid beanie behest blanca bogged bronco detach fleshy fliers graced hadith jekyll looser manger minted nestle pianos picker ramona reflux ritter scoops senile setter sleigh sliver sordid sprawl stasis sultry swivel toying unkind alonzo bestow bustle collie docker docket drifts fascia fasten feasts foiled frigid gasket homing kamala kirsty lagged leeway locale ludlow millet negate nomads pooled recoup roving snooze spasms staked suitor unduly walrus yanked ashraf baring brandi bumble carnal collab darkly deduce dogged dosing elated fables felons fillet firmer garter handel icarus lustre maxima mongol mullet pagans petrie pounce rhonda savers shanks shoals sienna silvia soiled tenths untill vented winona yahweh yonder arable argyle arlene atrial bionic cetera chisel choirs cinder cirque condor culver fennel firsts forked geiger jester luster maduro mousse naught outrun pisces prawns quirks rectum sodomy somers sonnet talker talmud taunts tether vermin weaves widget arroyo balboa bolder breads denser dooley encode erupts fuming halved impure kimono lipids looped macron muscat nippon nitric paging penang popper raking sadder sancho saxony sexier slurry smarts stints swerve tiller topple triton tulips turban unplug valium wanker alkali bowden campos caress chopin combos damper dickie earner envoys eraser friars frisco gasped goings gratis guiana hubris hurrah kiddie lapsed lilith mailer mugged nursed ocular oxides possum potted preset raiser randle ratify recast resins ruskin sander seabed seamen shazam spotty struts tabled thefts whitey ablaze aegean bogart busier camino clumps cocked combed commas cooley copped cornea dengue docile droves drunks dyeing excels farrow folsom groans gypsum hasten hushed impair jerked layman milieu mysore oblong panzer patchy plowed pusher resell rusted scalar swarms thorny tosses trifle trixie venous vishnu wedded whiter adores argyll ashram capone cesare chatty chokes cognac commie dangle dearth flange flaunt flinch gables ganges grunts hooves idiocy ironed lapses loaves murmur pained plumes presto pulley qualms reverb ribbed rodman sarkar setups siphon taming truest vassal velcro werent accrue acumen allele andean angers ballon breech caliph cameos celiac choppy crawls dapper drapes eluded errant eunice evaded figaro flatly fusing grills hiccup imbued lactic larval leonid lunacy malloy mantel mayday melons melton merges mumble putter remand ringed roamed rotors sandal swiped tartan teapot unsung valour wetter adonis arouse baller bogota brahms chimps coiled craved craves crutch cutout decals expend frazer frills gagged garret grinds grotto habeas homely inbred incase magpie maoist masjid motels musket nestor nether obsess orator palais pliers puffed rectal septum shears shiloh shrank squeak steers stucco wedged welder altars attila bering caches civics crosse damsel dewitt dickey esters fabled fijian gander grazed guelph heeled inflow milled moored oozing opiate osprey patten pomona praxis primes quench reruns retort rework rudely selina shogun slacks smalls synced tamper tampon toffee triage undies adapts airbag airman aligns amigos artful bluish calico carols cleats clings clingy clough correa darken defuse divest eerily embers goblet hurray litany locket messrs mikael neuter polity pooped portia prides probed reiner ruckus salami scopes seared shaven shrill snowed strode tartar thorax unsold apical blazed brahma braver cycled dashes detest diodes dwells elisha fleury gawker glycol gopher grinch hander hattie heaped jackal jaeger jethro jokers lackey luring macros merino necked oswego papaya peachy pearly prying radars samoan splice stroud supple tacked teague tirade trisha vigour vistas winded wisest alamos barbra caspar clawed coerce cometh coptic dahlia euclid felled geezer infamy jacoby lookup meagre mildew paltry pinkie placer pronto quince redone seizes smears tiling tingle treads tricia tryout wanton witted axioms aztecs barrio burley cleave culled czechs deftly hakeem hazing imogen indict kiddos konrad kraken lancer landau lauder lumped malaga meddle micron nibble pagoda pilate puking ramble razors reebok rodger romain sainte sanger shasta sparky sprain thermo uglier upping walkie zephyr zoomed aggies angler berths briton bungee cadres carina cherie comers conned dreads drowns druids eccles flappy forego grafts grainy grundy holler justly keypad kimchi lottie menial napalm neared overdo pulsed quiver refuel scones shiite shiraz sombre spokes stoker strays teases turnip widens zebras bobbie bygone capers cedars cortes cranks dinghy dipper elvira fallow girlie gobble ingest katana kendal kiosks massed mauled mekong moulds ormond outlay pandit pathos pimple popeye rainer rubens rubies sedans spacer squeal squish steppe suresh tekken thrush tropic wields wretch yakima yamato baloch caving drowsy dunlap elwood eocene esprit eunuch extort falter flutes getter halter hawker hyenas idling infuse juneau lanier linens mollie parson pelham piglet rotted rusher smyrna solver steels steely surety talkie verity zigzag acorns acuity cocker cornet cuffed daemon dampen dipole effigy girdle hookah jumble labors maimed nudist nymphs orgies pajama panics pawnee penney potash salter shined smudge swatch taboos teflon widths wipers adolph alpaca argent asgard beaker belted bereft bobcat bruges candor carats chaste chucky cypher dermal donned frayed geyser gibbon goodie gorges grooms hearse hotdog loomed moaned nutter osmond paloma patted quilts radium rancid renner savile sayers sculpt sicker sizzle skated snoopy sobbed squint thrall throng verily wallow wouldn aureus bantam barked belive bellow bonsai boyish bushel busses cation corrie cotter dildos doings eloise frieze hither honing hyping idioms layoff measly muddle nabbed oeuvre oneida pixies plexus poncho robles ruffle sardar secede shakti shanti shaver sherpa stowed strobe sylvan throes tomboy uncool urchin vandal afresh aquila baited blazes bridle cathay caudal chiles crests duster eatery farted foetus geisha glassy groped grubby hatter hummer lipped livers maggot mahesh malkin margie missus musica onside pamper pauper pewter pippin plenum priori purges radish roasts sativa savour sawing scarab scythe semper spires squirm stoney theron thicke thongs unease uptime urinal vipers visage wether winked woohoo angina babble barman baruch blinks dented driest elinor entree ghouls gnarly hippos islets leaped lichen litmus mendel mourns mutter oddity odious patter pieced ragnar ramesh reaped renter revels rinsed roofed rowers shifty soured talons tigris vapors wasabi whammy whines wilful anemic bayard becket bonita boomed ciudad discus dryers exerts fester flexed gallic gnomes gunter iberia kojima leaner lingua llamas milked misfit mucous mythos pariah peddle queued resold rimmed risers sedate shaves shriek skimpy sloped spooks sundae sundry swampy typhus billet carded cashew chroma claret clothe denier dimmed fiends flirts hiller jardin jemima lilian matted navies pieter pining posits punchy railed rajesh renews repose rubric shaikh shanty sherri signor stilts tanked thakur toning ultima wafers whoosh wooing zipped abduct aether amicus batten bodega broads chapin cochin coders coombs couldn darien fanned fevers frisky ghibli givers grisly hetero iguana invert jammer jovial kippur meehan mussel obispo quarks solano toting aprons baboon balled bowery duffel envied feller fisted growls guerre hovers italic jenson kimura lawrie malays molest mullah nicked opined pacify peruse piqued rashes renoir rivets salina salome scorch scurvy singly stooge twisty untied uplink veered vestry weevil wintry acadia acetyl awoken baffle baguio belles bested brecht canter carpal cloaks cobble dimple disown dormer drivel faerie genial hairdo hardie hombre iceman joiner kristi lapped lather ledges mended mettle molars moulin ouster primus quakes raines rustle sabina stadia stupor swifts toasty voided wagers zeroes barium befall behead bladed brooms cogent delves edwina faeces femmes flabby frieda gaggle gazebo girder gretel grosse herder inlaid larynx lassie lifter modems nettle polyps recede savant stocky sullen swirls taster teacup testes thatch thawed towson unread waring winkle yeoman allude animus anubis awning berber booger cabana chitty chutes citric givens hansel heeded jurist kenton kisser lakota leaved lysine marais midair nudged pitman plying preyed pulsar putrid pylons ramped rapped rucker shacks slouch spewed triads tufted tumult ushers womans woolen bedlam beluga boreal brough buries burlap coldly forges frowns goddam jiggle keeler kitsch lazily meshes mimosa phoney raison skippy slings speedo stubby tapper tassel tinned unsaid uppers woeful assisi bookie catnip chalky cupola dabble debunk decays despot farina frolic glides goatee hadron lowery majlis manors marist mobbed moneys panini patina randal semite sipped siting taoist touche upshot vowing voyeur warmup weaned aikido aileen azores basses camber canelo chiral copier danzig depose dimmer edicts egress eights faring galena glyphs imaged jogger kroner maidan mucosa nashua penile rigour rowena salvia signer signet skewer sloths snares specks squall strove tivoli turkic ultras usages wheres avowed bahama biotic coolly dodges dunked elbert engulf flings franca grates haggis hainan hemmed hoarse kebabs koalas kodiak kronos lentil lepage marten meaner mignon mosses parkin peered puffin reefer shoves slinky splint stoops swipes syriac tenses toasts tubers verdun vickie abacus acetic aldrin amoral balsam bobble buoyed carted chimed cirrus clench defile delved dingle flasks folate fulani giulio haggle helios hotbed inking jeanie madmen marshy nother oberon recaps resets rifled sadist samara shimmy shucks stator stewed subpar swanky swaths tinsel aghast amoeba anselm append bedded burnet chaise embiid erases fasted fealty filial forays goshen grands hyphen ketone leaded lyceum manchu maples medias muslin myopic nipped outbid pander peeked phenol poppin prewar prunes puffer quarts repute serine snazzy snider snipes sorbet tensed timbre tiptoe tithes tonkin torrid tugged whorls winder aphids aromas biloxi braved cecile cecily chucks cormac corned creeds crepes cygnus darned enders etudes frothy gantry glades glowed gramps herded hillel homily humpty karmic keener morphs mortis mutate nimrod nubian oblast omelet paella papier parser phenom pinion pivots posses preppy rattan rickey shiner sleuth sluice tantra tarsus tasker tipper tussle typist uproot usenet waxman wilmer alcove arcana bandar basset bodice brainy broach butane cabbie callan chippy chives clamor coelho coking crusts dollop doused elissa gorgon ionian laymen lunges masque messer minnow nimbus plucky puller queasy quiche redraw remiss roused sharps shinto silken spawns spongy surest sweety wallop weenie witten alphas antler baraka brogan bunyan cruces curbed dished domini drudge exudes facile fluted gasses gawain groggy huerta hummel infirm jailer joists kenner lacing martel medica meeker monger musing offing parley pavlov prisms raster reeled sandia sinker slates sortie tenner texaco titian toiled untidy vassar vitals afridi ahmadi amines begets bharti brunel brutes bulger cached caddie caplan chiron choker costal croker decoys fjords frizzy harlot heifer hoards humbug inlets intros jarred jasmin kayaks kneels levity limped lucked massif moguls mowers natura oddest perdue plinth priors quacks reheat rutter scruff siesta sikkim staves theyve tigger tupelo vishal vizier whimsy wilted zander zircon abated albedo angora beulah brawls callus capote cherub coaxed corker cymbal disuse dozing fatale fibula fidget fondue glared hereof iodide juiced kabuki legume lemurs lunged madder malign maliki marque merida moiety moline morsel murthy purist rajput rialto rococo scurry sepals shader shaper shaykh sieges tapers teared theism tilley unseat yearns acquit amuses aryans asides batons bowyer butted ceding celled crummy cyrano darted demean drupal ducats durian flamed flavia foetal garish gluing googly gringo hoaxes hodder infill kidder lances leaker lepers lessee levees lodger miffed pecans phlegm queers raglan rapier ravage singed sorrel strang thymus tomcat tramps vexing waddle whined wombat apogee banyan biogas blimey buller busily byline captor drakes dvorak eschew faints furrow gaffer gaiety giveth grimly ingots jogged linker lumens lurked mitral nougat parlay pester pruned retold rhesus sadism sealer sifted sniffs solute stover theyll tidbit ultimo youngs addled aeneas althea belfry bhagat bianco bicker boozer chewie cinque cowper demure fenner gating gloved godson hagrid hammam hedged hoopla lockup loring lucent mensch messin mockup modena moslem myopia negros pallas pyrite rafter romana scalps seeped sequin unwrap vernal wakeup willey abides adverb beamer berets clasps cobras crewed dozier farris flaked fronds glazer holier hoodoo ingles likens looker magyar mahone malady mantua minima murine paulus peyote pratap quinta rigors shames smithy snooty snotty tedium tilden tittle tubman vellum votive ballsy befell blanch bosque bracts burnie casein casted conger craggy dinars favela fining funder fussed gainer halide heists herons infest irises mandir mooted noggin paring pestle pidgin pinker plover recuse rhymed roping snugly spurts stevia thalia tiffin alaric ataxia balked beachy beefed betsey bhakti biotin blunts busing caries costed defame eludes enfant everly flecks flexor furies garuda gauche gripes grosso helmed keying larder logger logics meekly metros mouton mulled muting peeves pelted phobic pinged prided rajeev righty rimmer seaway shales shawls sherif sigurd simian tuareg tulare twinge webbed yarrow astern banque bobbin bolden choosy cutesy doting dulled eloped fondle frosts gaspar gouged incurs jilted juicer justus legate linder montes pecker penner pucker punted ranjit relent retest sacral shtick skunks slayed slicer slumps snobby sonics spayed spouts sprees struct suplex syrups tallis tongan troika unhurt virile wattle annexe bangle beadle beheld belies blocky cassia coburg cosine curler deejay enduro fluxes forger frilly gammon goring grater guises gushed howler hubbub junius keeled knotty liaise mayans myelin niacin nought omnium pitied pumice rancor rehash retook selden selene snorts sookie spunky subsea swaraj tarred terran venter vetoes weaved wining zealot abbess accede adagio alexia archon barged barony barret bashes biding boning bonito bucked dammed deform deltas droopy dumpty egbert errata fatten fizzle hazara hissed itches jaunty khakis lemmon lenten looper numero phaser physic pickin pineal prelim prongs quarto sanded sashes sefton storks techie yeasts altair aviary baddie belton bolero budgie cayuga cicada climes cupped cuties damask destin erebus fortis gauged geckos gimbal hugger intuit medico mikado odours opines pastes quills reiter rodham romper roomie sangha smooch spigot squids taoism tingly tuners utters vomits wiggly zeroed ananda anoint blithe bourse carman coitus croton danton delude duffle glares howled isolde jolted joules kibble kilter leyden limbic livres lulled mitten nettie ordain outwit padang pattie peeler plazas resize revved rincon scolds shoppe souths tamale unmask uppity upturn witney worden alumna auteur bagger bratty brevet capper catlin clammy colley cooped crikey crypts dorsum enacts ethers farouk faunal frauen froggy gigolo glided goodly hauler hereto huzzah jitter lawman lemony lifers looses mauser meanie mugger optima pippen pommel seesaw shires skyway sublet sunder surfed swoosh taketh tonics vestal waists adorns aflame audios avanti avidly bulges callow cesium colada copter crabby cretan crocus cromer dogmas ermine estado finery fletch haptic horsey isomer mopped pipers ranted soiree spline spritz stomps urbane welter adorno arcing begone bisque boxcar caxton chumps cicely citron conant cranny cretin dictum duller egging elohim erodes fianna flexes fuhrer glazes honeys kirsch lignin limber minoan natale numbed nylons pashto phenyl pluses prater raring rewire russet scylla smarty snores solent tannin trowel vesper waders wester zapped berate brigid camara charon codecs colter cynics dilate discos dolled eddies facies fiddly gerbil heaved hyphae indent indium kikuyu kitted knifed lamina leaver lemuel meshed morose nudges pimped quatre ramiro redder regrow repels sapper scopus semple serums settee sodden specie sunlit supers swoops tawdry transl tunics twiggy velour vilify abbots affine bataan belter bluesy buffed bunsen canard cooing costar coster cubits dative dhamma dressy elvish folksy goggle goldin grasps holdup honked hunker icicle imager inborn lapels lineal logins machin madcap maquis matric minder mouldy munger nablus oodles petted planed quando quasar rafale ripoff risque scania sprigs sutras tallow teeter testis truant wacker wailed yarder awakes bakshi bitmap boners buzzes cadmus cardin chided corvus dorcas ebbing equips evades gonads gullet hamada kachin lazier maitre mohair moloch patios pectin poring portly recant saunas snaked squawk supine totems witter anally attics befits broods bungle cachet cackle churns corded dermis eggnog flayed gayest goober grazie hobble honcho humped mangos merman nicene outdid patria pawned peeped reaves santee schick scoffs seraph shruti simile slushy sufism teensy thumps tibial truism verges vigils weeded whiten yippee ageism aliyah ancona anions arriba bathes bikram binned bowtie burman carves chummy crowed cubism cubist debits deride epochs foment founds frocks goaded heckle heriot inched jinxed junker labial lazuli leaden lilacs loafer marmot missal morgen musics nighty peeved peewee perron pogrom quinto reeder sappho slaver spools subnet tempts trudge tweedy unmade vicars wedgie wheeze yuppie zinger aramis basher beckon belied bhavan bigamy clonal codify crofts deters deuces diadem diddle dinero evened expels fencer floaty florid flours forfar ginkgo gympie hashes jazzed lobbed mallow mangle maxims moping perked prance purser pylori ramada rufous sabers shelve shrike smugly tidied tipple tunica upwind warily bobbed boughs byways callas canker carles creasy dabbed datsun dearer defray edgier egoism enrage fracas gargle godiva hisses hoists houser instil kaolin lamest loiter loosed manuka narcos oolong pallid parsed petter prabhu quanta rundle seidel shandy sontag souter totoro totten visors winced amrita brassy cussed drench eggers ethane exuded florin gentoo glitzy grampa hallow haring hashed huffed hummed iambic jobber malted myosin neater pleats pokies ragtag razzle ridged sattar scummy smidge spiffy stevan syrupy tempos tempus tented tooled torpor valois vinyls ambler animes aplomb atopic braked choate comely coolie dumbed eudora exmoor faecal finkel furore kronor kumari lessor maslin minter minuet morass morena natick noctis pastas phylum pincer planer sapped scoped slicks snarls tabbed tabula tarpon tenors thusly tinkle toucan vainly vixens whaler yawned areola bagdad boohoo brunet caning cashes chinos concha cornel coulee creaky dearie deeded doling endear fokker gnawed gourds gratia grungy gushes jarrah jesper kagura latins loners moolah oriole patois pollux pretax putsch rideau rocher rudest ruffin rupiah sacrum seance septal severs sevier sexing shamus softie sputum synods tolled tonsil trilby waives zygote aeneid backus banzai bawled bogeys brawny cockle corgis damped dasher ersatz filers foamed gaffes gizmos glamor gooder gramma instar jenkin journo junket laddie lucina machar mapper melded mohave ocelot oiling pathan pecked posada prefab prissy prolog rashly rebuff scanty steins storer tattle turgid warder atolls bihari biomes bosoms bossed bougie champa crouse danner domine entrap gertie gneiss goofed harmer hymnal jabbed jetted khalsa lowrie mattes miming modulo motile ornery papyri partie pontus preamp pummel rigger rioted shanna silage sindhi skelly suckle toeing unclog unwary veined waster witchy ancien axonal boldin bolter bongos carfax coddle collet cooter deface dinger enemas ganged gnosis gudrun hangul imbibe inlays kipper kismet lacuna leaven lintel loaner micros nagged nobler nosing olivet papuan pyjama reeked ribble rumpus screed shills stalag toothy tosser tought uighur adroit arista baggie barest chabot childe chirps cravat curios dieing dinged dobbin erring ferric fixate fonder garcon gaucho icebox kaffir labrum lasses lathes lumina mopeds mouthy myrick nodule nonfat octavo parter purana roxana sayyid scarfs schist scouse screwy spinel taxman telfer whinge workup wyvern yojana beaked bended bogies bootle bryony buccal chichi coupes dioxin docent earful efflux folios gratin grouch khatib lucile mammon midges napped nipper nuncio ogling parfum pernod pileup posers prunus reined roomed sicken souped stumpy sulcus talcum turbos virtus anther arusha azteca bauble bemoan bosons bowker brogue cobweb demote ducted frisch havers indole izzard jeered lading langue leafed linley lipase maumee mudder nieves othman pappus phenix pinyin pullen redden roofer scharf serous slippy sorter sundar swathe tiaras tonite unripe welled abbasi abhors anklet belial blotch cabled cantos canuck cassis chafed cheval chinks coleen confit curlew elytra emotes exalts finned frumpy glioma globus grovel hulled jangle judean kingly krantz lagers lariat menage muffle nadeem necker nomine ostend pomade poppet pumper rosier rosser roxane shamir smirks socked suntan swirly wenzel wigwam wreaks abbeys adepts alibis anoxic aymara baying bellum blinky boggle choses ciders copula dingus fixers fogged giglio graver hadden inwood judaic knacks lapdog libera licker miasma milady muskie plucks powwow quails razing redeye regale romany rotund sarong scions scrawl sextet shying steams tambor thaler towner trills undoes abouts bussed collis cudgel dibble dimwit fakers gallus giggly grumps harish hecate insula jabber legato manton pagers pampas pavers pawing perkin pinata privet purred renege roemer shrews snared spanky spoofs stroma triode tsetse tunney unroll valens valets wavers wessel witham adonai amadou arbour ardour baroni bootie bugler cuesta domina drover firmed fryers furred gurkha hoeing husker induct jochen kerner kersey limpet longue lychee nuzzle oocyte pendle phobos pureed ramage repack ridder skylab slimes snouts stoics styler tatler tedder teepee thrips turney yeomen zoster affray amores askari azazel badged bedell binges bouche brevis broody busker buttes chappy chinas chitin curiae defers dimers doughy dunder filmic formic garten gasser holies infers initio iowans jotted kerman lithic lusted muesli nubile palmar pinder racoon ratted rehire retell revoir rippon rumple sarada slavin smarmy smutty succes swaggy tatami torsos tuples warded wilkin writhe afters allium azrael badawi baobab beeped bessel capsid chirpy coppin corked egoist egrets engler exhort fended graven gulped jarret knolls limbed liveth mallee matchy midden mistry nickle pinner prepay ramrod rappel recurs regula ripens robbin shrift sixtus tassie trichy triune truong unfurl vibrio villar whacks atoned bezels bidens bleary blowup brumby bugles capito centos chemin creche dentin dicing embeds espace flavin flukes formby gelled grappa holing impale jojoba jostle lambie laxity lofted malate moduli nimbly nympho ossian palmed pornos propos retool sagged smriti svelte tilled toupee tourer vivant willet windup wonton ampere aright balder bandon bellis bulked caiman centra dagmar dander durbar exhume fenian fibrin fitful footie gabler gannet genies ghazal gouges hipper hosing inured mandan mangal mastic merest mickle newish peplum petrel phonon rodeos sachet shekel streit theist trompe unzips wafted wisher anglos armors bailie banjos benzyl bolded casbah cashel dalles decant depute etoile gelder gimlet heaves hellen hipped inseam jiggly kittel loggia lupine marron masher mezcal oblate peptic populi pravin pudsey pursed quadra ravish repays riffle sarees scrums sextus stopes swales tempeh thresh townie unhook anodes badder balaam baling barite besant bimini brushy bursar cajole caribe carvel consol cultic daimyo decima dopant doucet enjoin envies fortin gascon gilder harken jerkin jovian lieder lopped menses milken oporto parang pardee projet rectus rutile salish senora servos snippy spader stodgy tabriz turbot vodkas whiles bluest bunton burdon caking churro cloven codons coffer coombe crated cronus daimon decamp drools dumper earwax eclair felted fudged gangly grabby hathor hoddle jerker kahuna kairos kennet magics netter oilman paling penman plater polska purine ribose seethe slants soaker stably umpqua virion animas barras bedbug biters briers budged burghs cellos cerium contin dually eldred espada eyelet fakery fescue gorged humors knifes lazing lurker marita petits pitter pliant rennet rooker rueful scampi shroff slaved speirs tannic whiner withal woofer abided aldine bester blonds bridie brulee carafe cloaca colons curtly dowels dyadic granth gummer guzzle kamiya kowtow lavage lowing lucite macula moksha oedema olefin organa otitis pallor plaice qualia relict renate sallow salvos samiti scaife scrims sisley stoped stymie theban themis turbid yachty assize bailee ballas barque beaune blimps bonbon buenas chesty chitra coccyx creaks datura dialer ejects filles flints futuro gaskin graben harari hooley impish insole ipecac lawmen lector lidded magnon meikle mourne negara pesach pisgah premed ricker rotter rouble sambal seamed shrove sinews sneers sperms spiers".split(" ")
+  };
+  const ANSWERS={
+    4:"most much very work year made take many life down last best such home long same used both come part find help does game give next each must show sure team left city days name play real done care live read told four hard mean once stop head came side went line open shit face five kind news able post talk fact guys half hand mind body true fuck lost girl nice yeah york idea past move late stay deal turn form fire easy near plan kids list type song word gave gets self cost held main road fine hear rest term wife date goes land shot site club film knew lead hold view hour wish gold gone july bank east role sent rate save blue fast felt size step paid upon hate send vote lord born damn code hair lose pick race sign walk ones safe army goal huge okay ways base risk card dark mine note boys fans pain cold anti beat join kept sort drop fair link sale tour jobs sold wide fear lady plus unit hurt rule ship band cash lack wear luck skin thus fish grow cars laws male spot holy lots shop sick drug heat ride slow whom runs wind cent lake arms fund push seat draw gain ring rise soul wild camp cast firm gift shut copy dear dogs host busy ends farm file dont evil iron wine core lies port flat fuel mail pair zone boat duty path rain vice warm arts crew suit wins debt grew jump tech user flow hero joke loan soft legs guns hole milk pack snow weak cute fake hits task acts pure bowl meat mode neck zero jail tiny wave fail wing hang info salt blow bond mile wars flag load plot rent tips chat diet item navy tank tend golf laid mate calm dumb hide quit sing ages bike burn cake hong loud peak puts grab pink lets lock nose semi wise aged lift porn bush coal inch jury kong tone vast auto earn grey meal rape rush bone gate harm jews thin tied cats gear tons acid bars fort math bath rank sand tape wage bags desk wire belt cops cuts maps sexy soil suck ugly deck dies dust rail crap gods hire pray sake keys spin coat ears fate tube cant epic exit lips sept tear ties fame tail twin trap bang cure bite dare mask ruin cape edit nuts seal stem drag rely sole tale wore dual gulf nazi slip corp fits mars tune bold clip exam menu nope pays worn aids khan poem rude toys vary dirt lazy shoe chef palm pole shed folk leaf woke aims dish duck hung lied nail owns poet sink snap swim beta cave dose flip punk wrap yoga bulk coin corn raid taxi bare bias bits clue grid soap beds lens thai aunt flew icon ours pics thou tier caps crop soup beam horn lean pile plug bend cage disc visa blew dive heal prof cups drum grip mild rage silk urge lung pine pose pour sang cafe cult euro jets leak mice riot slot wont bros coke dump fold myth pale pets torn hint nest scan span tops demo rope bout fled foul hack lamp oven rats spam tide bolt bugs bust cope echo soda fork hype junk pork rays arch axis goat heck liar slam tire warn bail disk hats nato sail void whip wipe chin coup dash jerk nude bent deaf dock feat neat pigs sore bean bump cart cord lawn olds oval pity pond prey clan hers slap dame melt oath stir toes trek unto amid eats hike lame plea sigh fare idol leap scam swap trio vibe acre amen bore buys cows dial halt monk hail lend mint bake fury glow lone reds rode sack sung yang dome dope gosh mins rack sued bury cubs fist fond frog heir isnt tens tomb trim blah haul node sour bids cunt pros fade gaps lads lime maid oils outs owed rows surf sync bait bark bets comp lang mock spit envy nash swan bald boil cone isle obey ramp sage thru bats cube labs lace quiz tags whoa bash hawk logs nets pony sofa cans crow font glue lyon modi pins ribs tick vent bred curb dong hips foam kits prom stab chop guts herd lick mold pads scar vein worm cane cons crab dice dots foil gram ping pots prix slut turf bind gems gore govt gown halo lent mesh pens cola coma rams rust stud sunk vain coil flex hose pact vest vine ants atom hulk knot mayo owes pits rang tile verb apex calf cork dept fest funk jong lump scum akin gays gaze hugs hyde idle limb quad sank vows yuan aide bali bans grim shin taco mans marx mets pike refs cite dent holt lays lure mist mole rant rash ripe sane spun wong acne chew dime dire hare knit laps mute nerd pint spur veil dang duel helm maze peas sway veto zinc brew cove cozy expo koch nile pest poly rift tuna atop buds ding fiat puck rite warp womb damp feud fuse meth vile bale chap darn hymn oaks reps soak sock tabs bloc flaw grad mare poke pres yarn".split(" "),
+    5:"right years being those world great while since under thing house place found might money night until doing group women times today point music power water based white later party thank using black makes whole maybe story games least means early video young court given often death hours south large wrong along close comes cause human woman north watch light short taken third among heart asked child media phone quite works final front ready bring heard march study clear month words board field wants fight force space above share break takes girls learn alone hands movie tried sound value lives round stand drive match model range trade chief lower style stage terms enjoy cover super began built crazy daily knows parts voice whose earth rules below table build wrote gives speak write album eight spent store track brown moved plans radio focus loved extra quick clean spend teams heavy train claim goals hotel judge lines named brain image meant reach dance stock worst beach older dream grand names touch doubt drink shown basic crime plant worse block lived rates avoid coast trial truly broke types begin ideas notes plays twice brand count fresh mouth owner scale score smart throw views metal agent prime waste weird adult grade stone items proud birth drugs labor prove tough units alive bitch cards horse liked magic owned stick turns guide raise yours youth funds helps exist forms guard jones likes solid sport facts links plane shape cheap joint tired crowd fixed ocean banks chair homes noted email stuck sugar entry grown heads lying route saved smoke squad teach abuse angry laugh loves lunch actor chain equal leads quiet split taxes fault films mixed phase smile truck votes blame dying false fired novel shirt cream giant minor pages voted draft drunk finds spoke talks upset birds holds wales armed aside deals empty faces folks moves prize admit favor frame guest bunch fruit index shift crown chose crash depth dirty noise panel plate roads shame cable dates multi print sight broad drawn solar tries blind brief chest debut paint pilot steam clubs exact kinds loans quote swear trend yards bread reply tower faced filed marks pride rough topic pants sharp trick audio chart mount tears argue awful bound cloud files moral shock thick threw bonus flash minds trail uncle badly ideal roles wings naked opens pitch plain anger ghost newly solve trash virus hired kings knife saint steal trans cares delay forth hopes layer nurse rugby bench medal towns angle firms forum gifts races rapid rocks sixth valid vital bands fraud lands ratio scary sword waves begun cents drove juice logic strip dozen holes input ought bears blues boxes swing alert brave drops jokes parks rings shake shore blast bones pound punch walks grave mouse piano slave craft devil hurts rated ruled sauce slide tiger alien beast cited relax acted globe hoped spare bonds chaos corps opera quest sized tanks anime coins fails lover panic scope aimed boats brick gains outer reads screw wages burns habit picks toxic wider wound baker brush maker ranks snake trips ultra usage beats climb evans fluid loads nasty unity winds blown chips males stole bored dealt flesh forty hated laser patch adopt blade bucks camps cargo cried humor meals codes grain grows lions liver metro mines rifle rival sadly slept spray suite acres crush fears fires shine inter maine react shade vocal yield bacon burst hates stake swift twins beans blank curve farms flows lakes organ sweat tours alike cabin guilt charm cruel delta ridge tends tribe zones cared pairs poems stamp voter witch backs draws lemon shark tales dairy diary flags flies jeans safer setup basin fairy freak grief lined lodge lords merit micro raped viral wears wives beard curse drain flame ports reign scare cheat chile demon fiber fried pulse realm rides shout alter crops graph penis stack audit blows clips joins nails singh spite burnt buyer cloth orbit ranch tires trunk badge paths ruins shelf width legit loser stark thumb urged wheat wrist acute clerk crude drone exams flour minus pause slice vinyl debts mates probe remix sneak spark straw weigh cohen cyber whale ankle clash grasp handy lanes lungs poker scout steak tumor modes polar skirt waist wreck blend brake cough depot drank feast frost purse vegan float grind locks lynch nazis packs risky sober spice swept towel tubes arise clown cries downs drums guild prone sixty sonic spine admin baked crane batch idaho paste stare blunt champ ditch ducks fucks scrap shaft slope snack sworn unite vault wagon bikes crews hawks lacks midst raids rogue choir leaks poles shiny thief whats peaks riots roast salon tuned vague covid dough hardy irony jumps maple relay risen whore wiped youre acids aired cakes flaws hints niche porch wires elbow johns nobel pains poets rains sperm swamp urine calif decay flown imply shave clues drift fuels grams scent slate surge tapes token tunes yacht anglo fries intro manor posed spoil flush hairy horns ounce spicy wines wired bites horny rails strap disco euros faint fines forge hears nodes notch omega worms bravo crawl flats hairs lunar peach plots beams cedar lifts norms pinch syrup tamil tones traps veins atoms bowls dwarf liner maths myths naive opted belts boxer coats cured icons joker laden limbs rainy salty serum skate stray tempo torch turbo arose blink chang genus glove grabs lamps negro owing proxy stoke warns aisle amino brace choke goats monks onset pixel prose versa ample bingo macro shady slack slick stove tiles vista vogue crisp crust fined grape hangs juicy prank spear stain tidal wrath beads blaze caves chalk flock hides hyper moist scrub shale urges wasnt clone drown scarf tails timer tying waits wakes baths borne fibre focal gears noisy notre snail yeast diets manly oxide repay ropes rouge shove turks bronx chord crest decor fetch hague herbs nexus nicer optic stein bates baton chefs chunk comet flank flare forex pedal query smack wards align comfy dicks flick funky hydro knots lyric plead bolts debit gamer lotus mails malik paved perks timed cites colts crank decks fares motel resin weary agony binge bumps caste chant curly famed fetus mound prick".split(" "),
+    6:"should around things during family second number having public person change enough making trying united course thanks others social single coming almost taking friend saying wanted months police reason myself behind market father action mother played points strong period county couple player rights result answer design policy longer worked ground source amount groups itself turned simple simply figure modern forget listen growth places charge moving weight double island normal credit nearly region travel beyond forces minute nature income posted safety asking friday search author german stupid active master wonder impact senior spring sunday bought direct easily caught closed notice winter advice broken caused prices theory agency claims flight showed eating losing mobile placed signed famous raised square forced fourth mental mostly remain acting budget failed sexual silver spread method monday prison handle movies videos thinks bridge garden length volume beauty buying images mexico paying injury models closer honest joined picked plenty toward flying plants dating labour powers profit bodies launch listed native survey update formed planet shared factor golden hoping lawyer values walked sector strike studio owners faster ladies lights scored begins editor orange signal stream talked voting bright brings chosen guilty humans jewish unable fields mainly scared switch adults danger dreams fucked saving branch brazil random detail parent unlike combat crying object turkey agents carbon deputy nearby retail surely client driven linked soviet weapon widely deaths hardly marine pounds sample stayed breath singer campus comedy covers wealth facing fairly marked racing shower visual barely fought gained junior korean sought finger guitar ignore pocket proved stable format loving nights breaks courts voters castle finals formal hungry phones rating silent spoken tracks waters hearts muscle thread blocks boring copies crimes custom drinks locked pushed behalf hockey judges racist struck aspect cousin dragon lowest stolen actors buried obtain poetry string thrown bother makeup belong berlin shaped whilst legacy remind tongue argued script writes breast expand inches lyrics ranked voices column ethnic genius priest proven brands duties frozen guards invest jacket trends trials boards burned domain favour giants packed praise rocket steady symbol triple equity partly phrase rounds shield wisdom polish ruling tables counts drives filter grades knight mature submit margin stroke topics trains angels backed fiscal ruined waited hosted jumped oxygen powder quotes racism spider export gather oldest poland sacred burden serial worlds cruise hotels permit plates safely slight backup habits holder quoted bronze caring trucks albums beings ethics fights poster routes wasted carpet gospel stored warned watson boxing cinema layers trophy unfair buyers casino charts clouds hitler laying makers planes retain blacks finest grants inform lovers norway strain tackle tigers tricks urgent patrol scream syrian breach closet dozens jungle linear pilots chains dental humble hybrid openly parish throne brutal hunger import lifted mighty novels purely rental washed advise lasted dublin fabric gently laughs layout pastor prints solved subtle throws tragic adjust basket brains bucket chiefs fruits matrix monkey nicely valued wounds filmed guinea holmes panels proves streak whites doesnt hatred median ranges stance subway argues blonde comply donate finale flavor gloves joking lineup puerto sketch trades aliens chapel flames kidney modest suited tribal tribes varied anchor bounce chairs fisher fridge fusion namely ritual towers frames insert liquor prizes timber upside wolves abused demons escort firmly kindly organs portal wished asylum clause dancer denial guides insult upload vector wicked absent atomic delays intake medals rushed slower admire autism grande priced resign employ marble pirate sprint superb theirs tricky viable absurd binary builds doubts herald locker metals munich pencil punish rivals waking admits locate motive postal refund robust varies virtue zombie bundle costly davies enjoys mentor miners pistol wizard athens baking debris garlic heroin impose lounge polite romans runway smoked trails albeit anthem danish exotic glance parked thirds verbal vocals angles armies blamed brakes burial chorus chrome framed gibson lakers peanut unlock alumni awhile gifted misery module mosque plague plains traces voyage yields candle carved metric verify blades cables crowds graves learnt sodium browns curves fringe legion mortal radius smiled sucked forums spinal spiral timely hating heroic knives rifles typing convey curved gandhi overly sorted staged hacked joints louder maiden nickel pardon poured replay bricks coding kindle boeing filthy lacked sticky traced warmth copied dances devils gamble latino modify shrimp vendor banker bodily depths drones durham ideals paired parody parole python sailor busted cursed felony nailed packet softly whales behold biased corpse insect neural oceans reckon tories voiced eighty majors waving beacon bounty chased clergy drying equals erotic falcon favors folder learns newark psycho ranged vanity castro crafts fluids franco grapes magnet notify patron regain revolt sacked shrine shrink sniper thames thrive unpaid flawed forged mouths petrol royals slogan strive boiler cyprus digest hourly posing sailed salute serbia slowed upward wagner coping daring deploy grains gravel haired hustle jumper oracle quartz trench bumper coated exodus flyers housed midway minors plaque poetic preach purity rhodes sewing stalin stigma thumbs tinder weighs bengal boiled bounds faults staple strand advent bakery bunker coward depart fucker govern hacker merits orgasm parcel prayed savior unsafe wander forbid kuwait morale paints ravens shaved soaked gothic hugely masked morals prague satire spying torque towels births corpus fibers lisbon rapids romney spared sultan divers holden inputs lizard naples podium ratios seldom styled whisky yogurt alpine donkey faulty gluten humane mantle mascot rapist tucked tumors vastly wisely buenos cavity fading famine homage invade pigeon pseudo unrest youths champs climax consul crypto europa extras meadow mystic repost shaken stared".split(" ")
+  };
+  const ACCEPTSET={4:new Set(ACCEPT[4]),5:new Set(ACCEPT[5]),6:new Set(ACCEPT[6])};
+  const BASE_TRIES=8;
+
+  const now=new Date();
+  const dayNum=Math.floor(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate())/864e5);
+
+  function rng(seed){let s=seed%2147483647;if(s<=0)s+=2147483646;return()=>(s=s*16807%2147483647)/2147483647;}
+  const uniqLetters=w=>new Set(w).size===w.length;
+  // pools of answer words whose letters are all distinct (since codes have no repeats)
+  const UNIQ_ANSWERS={
+    4:ANSWERS[4].filter(uniqLetters),
+    5:ANSWERS[5].filter(uniqLetters)
+  };
+  function makeCode(seed,len,type){
+    if(type==="letters"){
+      const list=UNIQ_ANSWERS[len];
+      const r=rng(seed);
+      return list[Math.floor(r()*list.length)].toUpperCase();
+    }
+    const pool="0123456789".split("");
+    const r=rng(seed),a=pool.slice();
+    for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+    return a.slice(0,len).join("");
+  }
+
+  /* ---- persistent stats: separate daily + custom buckets ---- */
+  const SKEY="decrypt.v5";
+  function freshStats(){
+    return {
+      daily:{streak:0,maxStreak:0,wins:0,played:0,lastDay:null,sessions:{}},
+      custom:{played:0,solved:0,bestMs:null}
+    };
+  }
+  function loadStats(){
+    try{
+      const o=JSON.parse(localStorage.getItem(SKEY));
+      if(o&&o.daily&&o.custom)return o;
+    }catch(e){}
+    // migrate from the old single-bucket v4 if present
+    const s=freshStats();
+    try{
+      const old=JSON.parse(localStorage.getItem("decrypt.v4"));
+      if(old){
+        s.daily.streak=old.streak||0;
+        s.daily.maxStreak=old.maxStreak||0;
+        s.daily.wins=old.wins||0;
+        s.daily.played=old.played||0;
+        s.daily.lastDay=(old.lastDay!=null)?old.lastDay:null;
+        s.daily.sessions=old.sessions||{};
+      }
+    }catch(e){}
+    return s;
+  }
+  let ST=loadStats();
+  function saveStats(){try{localStorage.setItem(SKEY,JSON.stringify(ST));}catch(e){}}
+
+  /* current mode + selections */
+  let mode="daily";                       // "daily" | "custom"
+  const DAILY_CFG={len:4,type:"letters"};  // the one fixed daily puzzle
+  const sel={len:4,type:"numbers"};        // custom selections (remembered while open)
+
+  /* ---- landing wiring ---- */
+  function bindSeg(id,key,cast){
+    $(id).querySelectorAll("button").forEach(b=>{
+      b.onclick=()=>{
+        $(id).querySelectorAll("button").forEach(x=>x.classList.remove("sel"));
+        b.classList.add("sel");
+        sel[key]=cast?cast(b.dataset.v):b.dataset.v;
+        updateSummary();
+      };
+    });
+  }
+  bindSeg("#segLen","len",v=>parseInt(v,10));
+  bindSeg("#segType","type");
+
+  function setMode(m){
+    mode=m;
+    $("#modeToggle").querySelectorAll("button").forEach(b=>b.classList.toggle("sel",b.dataset.m===m));
+    $("#panel").classList.toggle("daily-mode",m==="daily");
+    $("#dailyNote").style.display=(m==="daily")?"":"none";
+    updateSummary();
+    refreshLandingStats();
+  }
+  $("#modeToggle").querySelectorAll("button").forEach(b=>{
+    b.onclick=()=>setMode(b.dataset.m);
+  });
+
+  // the config that will actually be played, given the mode
+  function activeCfg(){return mode==="daily"?DAILY_CFG:sel;}
+
+  function updateSummary(){
+    const cfg=activeCfg();
+    const isW=cfg.type==="letters";
+    // custom-only hints
+    $("#typeHint").textContent=(sel.type==="letters")?"common words":"digits 0–9";
+    $("#lenHint").textContent="no repeats";
+    const t=isW?(cfg.len+"-letter word"):(cfg.len+" digits");
+    if(mode==="daily"){
+      $("#configSummary").innerHTML=`today · <b>${t}</b> · <b>${BASE_TRIES}</b> tries`;
+    }else{
+      $("#configSummary").innerHTML=`<b>${t}</b> · no repeats · fresh word each play`;
+    }
+  }
+
+  function fmtTime(ms){
+    if(ms==null)return "—";
+    const s=Math.round(ms/1000);
+    const m=Math.floor(s/60), ss=s%60;
+    return m>0?`${m}:${String(ss).padStart(2,"0")}`:`${ss}s`;
+  }
+  function refreshLandingStats(){
+    if(mode==="daily"){
+      const d=ST.daily;
+      $("#msK1").textContent="Streak";$("#lsStreak").textContent=d.streak;$("#lsStreak").classList.add("flame");
+      $("#msK2").textContent="Solved";$("#lsWins").textContent=d.wins;
+      $("#msK3").textContent="Win %";$("#lsRate").textContent=d.played?Math.round(d.wins/d.played*100)+"%":"—";
+    }else{
+      const c=ST.custom;
+      $("#msK1").textContent="Played";$("#lsStreak").textContent=c.played;$("#lsStreak").classList.remove("flame");
+      $("#msK2").textContent="Solved";$("#lsWins").textContent=c.solved;
+      $("#msK3").textContent="Best";$("#lsRate").textContent=fmtTime(c.bestMs);
+    }
+  }
+  setMode("daily");
+
+  /* ============ GAME STATE ============ */
+  let CODE,LEN,TYPE,MAX,POOL,sessionKey;
+  let gameMode="daily";        // mode this in-progress game was started in
+  let startMs=0;               // custom-game timer start
+  let guesses=[],over=false,won=false,current="",scored=false;
+  let revealed=false;          // user asked to reveal the code
+  let extended=false;          // user chose to keep going past BASE_TRIES
+  const usedSet=new Set();
+  const absentSet=new Set();
+
+  // result within the official daily allotment (drives streak); independent of extra tries
+  function solvedInAllotment(){return won && guesses.length<=BASE_TRIES;}
+
+  function sessionId(){return `${dayNum}|${DAILY_CFG.len}|${DAILY_CFG.type}`;}
+
+  function startGame(){
+    gameMode=mode;
+    const cfg=activeCfg();
+    LEN=cfg.len;TYPE=cfg.type;MAX=BASE_TRIES;
+    POOL=(TYPE==="letters"?ALPHA.split(""):"0123456789".split(""));
+
+    guesses=[];over=false;won=false;current="";scored=false;revealed=false;extended=false;usedSet.clear();absentSet.clear();
+
+    if(gameMode==="daily"){
+      // deterministic puzzle of the day — same for everyone, resumable
+      CODE=makeCode(dayNum*7919+LEN*101+(TYPE==="letters"?500:0)+13,LEN,TYPE);
+      sessionKey=sessionId();
+      const saved=ST.daily.sessions[sessionKey];
+      if(saved){
+        guesses=saved.guesses.slice();over=saved.over;won=saved.won;scored=saved.scored;
+        revealed=!!saved.revealed;extended=!!saved.extended;
+        MAX=Math.max(BASE_TRIES, guesses.length + (over?0:1));
+        recomputeUsed();
+      }
+    }else{
+      // custom: a brand-new random puzzle every time, never persisted
+      CODE=makeCode((Math.floor(Math.random()*2147483646)+1),LEN,TYPE);
+      sessionKey=null;
+      startMs=Date.now();
+    }
+
+    $("#landing").classList.add("hidden");
+    $("#game").classList.remove("hidden");
+    document.body.classList.add("playing");
+
+    buildModebar();buildGrid();buildPad();paintGrid();paintUsed();
+    $("#result").classList.remove("show");
+    $("#inputZone").style.display="";
+    $("#gmiddle").classList.remove("done");
+    hideOutPrompt();
+    if(over){showResult();}
+    else{msg(guesses.length?triesLeftMsg():"enter your first guess",null);}
+    updateGiveUp();
+    window.scrollTo(0,0);
+  }
+  function triesLeftMsg(){
+    const left=MAX-guesses.length;
+    return left+" "+(left===1?"try":"tries")+" left";
+  }
+  $("#startBtn").onclick=startGame;
+
+
+  function goHome(){
+    $("#game").classList.add("hidden");
+    $("#landing").classList.remove("hidden");
+    document.body.classList.remove("playing");
+    refreshLandingStats();
+    if(cdTimer)clearInterval(cdTimer);
+    window.scrollTo(0,0);
+  }
+  function inProgress(){return !over && guesses.length>0;}
+  function requestHome(){
+    if($("#game").classList.contains("hidden")){goHome();return;}
+    if(inProgress()){
+      $("#quitModal").querySelector(".modal-text").textContent = gameMode==="daily"
+        ? "Your progress on this puzzle will be saved — you can pick it back up later today."
+        : "This is a custom practice game — leaving will abandon it and the word won't come back.";
+      $("#quitModal").classList.add("show");
+    }
+    else { goHome(); }
+  }
+  $("#brandHome").onclick=requestHome;
+  $("#backBtn").onclick=requestHome;
+  $("#againBtn").onclick=()=>{
+    if(gameMode==="custom"){
+      // fresh custom game, brand-new word, immediately
+      mode="custom";
+      $("#result").classList.remove("show");
+      startGame();
+    }else{
+      goHome();
+    }
+  };
+  $("#quitStay").onclick=()=>$("#quitModal").classList.remove("show");
+  $("#quitLeave").onclick=()=>{$("#quitModal").classList.remove("show");goHome();};
+
+  /* ---- give up / reveal mid-game ---- */
+  function updateGiveUp(){
+    const show = !over && !$("#outPrompt").classList.contains("show");
+    $("#giveUpBtn").style.display = show ? "" : "none";
+  }
+  $("#giveUpBtn").onclick=()=>{
+    if(over)return;
+    const noun = TYPE==="letters"?"word":"code";
+    const extra = (gameMode==="daily" && !scored)
+      ? " It'll count as today's miss and reset your streak."
+      : "";
+    $("#giveUpText").textContent = `This reveals the ${noun} and ends the game.` + extra;
+    $("#giveUpModal").classList.add("show");
+  };
+  $("#giveUpStay").onclick=()=>$("#giveUpModal").classList.remove("show");
+  $("#giveUpConfirm").onclick=()=>{
+    $("#giveUpModal").classList.remove("show");
+    if(over)return;
+    revealed=true;
+    endGame(false);
+  };
+  function openHelp(){
+    // pick a concrete example per mode
+    const ex = TYPE==="letters"
+      ? {secret:"CARD", guess:"DARK"}
+      : {secret:"3179",  guess:"3751"};
+    const sec=ex.secret, gu=ex.guess, L=sec.length;
+    // per-position status (repeat-aware, same as scoring)
+    const status=new Array(L).fill("none");
+    const rem={};
+    for(let i=0;i<L;i++){if(gu[i]===sec[i])status[i]="bull";else rem[sec[i]]=(rem[sec[i]]||0)+1;}
+    for(let i=0;i<L;i++){if(status[i]==="bull")continue;if(rem[gu[i]]>0){status[i]="cow";rem[gu[i]]--;}}
+    const nb=status.filter(s=>s==="bull").length, nc=status.filter(s=>s==="cow").length;
+
+    // letters with a small tag under bull/cow positions
+    const letters=gu.split("").map((ch,i)=>{
+      const tag = status[i]==="bull"?'<span class="eg-tag bull">bull</span>'
+                : status[i]==="cow" ?'<span class="eg-tag cow">cow</span>'
+                : '<span class="eg-tag none">·</span>';
+      return `<div class="eg-col"><span class="eg-ch">${ch}</span>${tag}</div>`;
+    }).join("");
+
+    // peg readout: nb bulls, nc cows, rest hollow
+    let pegs="";
+    for(let k=0;k<nb;k++)pegs+='<span class="peg bull"></span>';
+    for(let k=0;k<nc;k++)pegs+='<span class="peg cow"></span>';
+    for(let k=0;k<L-nb-nc;k++)pegs+='<span class="peg"></span>';
+
+    const noun = TYPE==="letters"?"word":"code";
+    $("#helpEg").innerHTML=
+      `<div class="eg-secret">If the secret ${noun} is <b>${sec.split("").join(TYPE==="numbers"?" ":"")}</b>…</div>`+
+      `<div class="eg-row"><div class="eg-word">${letters}</div><div class="result-pegs">${pegs}</div></div>`+
+      `<div class="eg-cap">…this guess scores <b>${nb} bull${nb!==1?"s":""}</b> and <b>${nc} cow${nc!==1?"s":""}</b>.</div>`;
+    $("#helpModal").classList.add("show");
+  }
+  $("#helpBtn").onclick=openHelp;
+  $("#helpClose").onclick=()=>$("#helpModal").classList.remove("show");
+  document.addEventListener("keydown",e=>{
+    if(e.key==="Escape"){
+      if($("#quitModal").classList.contains("show")){$("#quitModal").classList.remove("show");}
+      if($("#giveUpModal").classList.contains("show")){$("#giveUpModal").classList.remove("show");}
+      if($("#helpModal").classList.contains("show")){$("#helpModal").classList.remove("show");}
+    }
+  });
+
+  /* ---- helpers ---- */
+  function score(g){
+    let b=0,c=0;
+    const codeRem={}, guessRem=[];
+    for(let i=0;i<LEN;i++){
+      if(g[i]===CODE[i]){b++;}
+      else{codeRem[CODE[i]]=(codeRem[CODE[i]]||0)+1;guessRem.push(g[i]);}
+    }
+    for(const ch of guessRem){
+      if(codeRem[ch]>0){c++;codeRem[ch]--;}
+    }
+    return {b,c};
+  }
+  function recomputeUsed(){
+    usedSet.clear();absentSet.clear();
+    guesses.forEach(g=>{
+      g.split("").forEach(ch=>usedSet.add(ch));
+      // Only eliminate symbols from a guess that scored ZERO bulls and ZERO cows.
+      // In that case every symbol in the guess is provably absent. If the guess scored
+      // any pegs we must NOT grey individual symbols, or we'd reveal which one(s) hit.
+      const {b,c}=score(g);
+      if(b===0 && c===0)g.split("").forEach(ch=>absentSet.add(ch));
+    });
+  }
+
+  function buildModebar(){
+    const modeChip = gameMode==="daily"
+      ? `<span class="chip">daily</span>`
+      : `<span class="chip">custom</span>`;
+    $("#modebar").innerHTML=
+      modeChip+
+      `<span class="chip"><b>${LEN}</b> ${TYPE==="letters"?"word":"numbers"}</span>`+
+      `<span class="chip" id="triesChip"><b id="triesNum">${guesses.length}</b>/${MAX} tries</span>`;
+  }
+  function buildGrid(){
+    const grid=$("#grid");grid.innerHTML="";
+    // letter size scales down a touch for longer codes
+    const chPx = LEN>=6?22:LEN>=5?25:28;
+    const chGap = LEN>=6?12:LEN>=5?16:20;
+    for(let r=0;r<MAX;r++){
+      const row=document.createElement("div");row.className="gridrow empty";row.dataset.row=r;
+
+      const num=document.createElement("div");num.className="gnum";
+      num.textContent=String(r+1).padStart(2,"0");
+
+      const word=document.createElement("div");word.className="gword";word.style.gap=chGap+"px";
+      for(let c=0;c<LEN;c++){
+        const ch=document.createElement("span");ch.className="ch empty";
+        ch.style.fontSize=chPx+"px";ch.style.minWidth=Math.round(chPx*0.7)+"px";
+        ch.textContent="·";
+        word.appendChild(ch);
+      }
+
+      const pegs=document.createElement("div");pegs.className="result-pegs";
+      for(let c=0;c<LEN;c++){const p=document.createElement("span");p.className="peg";pegs.appendChild(p);}
+
+      row.appendChild(num);row.appendChild(word);row.appendChild(pegs);
+      grid.appendChild(row);
+    }
+  }
+
+  function buildPad(){
+    const pad=$("#pad");pad.innerHTML="";
+    pad.className="pad keyrows "+(TYPE==="numbers"?"numpad":"letpad");
+    if(TYPE==="numbers"){
+      const r1=mkRow();"12345".split("").forEach(ch=>addKey(r1,ch));pad.appendChild(r1);
+      const r2=mkRow();"67890".split("").forEach(ch=>addKey(r2,ch));pad.appendChild(r2);
+      const r3=mkRow();
+      addEnter(r3);
+      addFn(r3,"⌫",()=>{current=current.slice(0,-1);paintSlots();});
+      pad.appendChild(r3);
+    }else{
+      const rows=["QWERTYUIOP","ASDFGHJKL","ZXCVBNM"];
+      const r1=mkRow();rows[0].split("").forEach(ch=>addKey(r1,ch));pad.appendChild(r1);
+      const r2=mkRow("mid");rows[1].split("").forEach(ch=>addKey(r2,ch));pad.appendChild(r2);
+      const r3=mkRow();
+      addEnter(r3);
+      rows[2].split("").forEach(ch=>addKey(r3,ch));
+      addFn(r3,"⌫",()=>{current=current.slice(0,-1);paintSlots();});
+      pad.appendChild(r3);
+    }
+    paintUsed();
+  }
+  function mkRow(extra){const d=document.createElement("div");d.className="krow"+(extra?" "+extra:"");return d;}
+  function addKey(pad,ch){
+    const k=document.createElement("button");k.className="key";k.textContent=ch;k.dataset.ch=ch;
+    k.onclick=()=>{if(current.length<LEN && !current.includes(ch)){current+=ch;paintSlots();}};
+    pad.appendChild(k);
+  }
+  function addFn(pad,label,fn){const k=document.createElement("button");k.className="key fn";k.textContent=label;k.onclick=fn;pad.appendChild(k);}
+  function addEnter(pad){const k=document.createElement("button");k.className="key enter";k.textContent="ENTER";k.onclick=submit;pad.appendChild(k);}
+  function paintUsed(){
+    $("#pad").querySelectorAll(".key[data-ch]").forEach(k=>{
+      const ch=k.dataset.ch;
+      // ".gone" = deduced to be absent from the code (greyed out, for both letters and numbers)
+      const gone=absentSet.has(ch);
+      k.classList.toggle("gone", gone);
+      // ".used" = a light strike on symbols already placed in the guess you're currently typing
+      // (skip if it's already greyed out as eliminated)
+      k.classList.toggle("used", !gone && current.includes(ch));
+    });
+  }
+
+  function paintGrid(animateRow){
+    const rows=$("#grid").children;
+    for(let r=0;r<MAX;r++){
+      const row=rows[r];if(!row)continue;
+      const chars=row.children[1].children;   // .gword .ch
+      const pegs=row.children[2].children;     // .result-pegs .peg
+      row.classList.remove("active","guessed","empty");
+      // reset pegs to hollow
+      for(let i=0;i<LEN;i++)pegs[i].className="peg";
+
+      if(r<guesses.length){
+        const g=guesses[r], {b,c}=score(g);
+        const doAnim=(r===animateRow);
+        for(let i=0;i<LEN;i++){
+          chars[i].textContent=g[i];chars[i].className="ch";
+          if(doAnim){
+            chars[i].classList.add("reveal");
+            chars[i].style.animationDelay=(i*70)+"ms";
+            // clean up so resize/repaint doesn't re-trigger
+            (function(el){setTimeout(()=>{el.classList.remove("reveal");el.style.animationDelay="";},i*70+360);})(chars[i]);
+          }
+        }
+        row.classList.add("guessed");
+        let pi=0;
+        const pegDelayBase=doAnim?(LEN*70+60):0;
+        for(let k=0;k<b;k++){pegs[pi].className="peg bull";if(doAnim){pegs[pi].style.animationDelay=(pegDelayBase+k*60)+"ms";}pi++;}
+        for(let k=0;k<c;k++){pegs[pi].className="peg cow";if(doAnim){pegs[pi].style.animationDelay=(pegDelayBase+(b+k)*60)+"ms";}pi++;}
+        if(!doAnim){for(let i=0;i<LEN;i++)pegs[i].style.animationDelay="";}
+      }else if(r===guesses.length && !over){
+        row.classList.add("active");
+        for(let i=0;i<LEN;i++){
+          if(current[i]){chars[i].textContent=current[i];chars[i].className="ch";}
+          else{chars[i].textContent="·";chars[i].className="ch empty"+(i===current.length?" cursor":"");}
+        }
+      }else{
+        row.classList.add("empty");
+        for(let i=0;i<LEN;i++){chars[i].textContent="·";chars[i].className="ch empty";}
+      }
+    }
+    paintUsed();
+    refreshStats();
+  }
+  // legacy names kept as aliases so existing calls work
+  function paintSlots(){paintGrid();}
+  function renderRows(){paintGrid();}
+
+  function refreshStats(){
+    const tn=$("#triesNum"); if(tn) tn.textContent=guesses.length;
+  }
+  function msg(t,k){$("#msg").textContent=t;$("#msg").className="msg"+(k?" "+k:"");}
+  function errShake(){
+    const row=$("#grid").children[guesses.length];
+    if(row){row.classList.add("err");setTimeout(()=>row.classList.remove("err"),420);}
+  }
+
+  function persist(){
+    if(gameMode!=="daily"||!sessionKey)return;   // custom games aren't saved
+    ST.daily.sessions[sessionKey]={guesses:guesses.slice(),over,won,scored,revealed,extended};
+    saveStats();
+  }
+
+  // delay long enough for the tile+peg reveal to play before showing the result overlay
+  function revealDuration(){return LEN*70 + Math.max(LEN,1)*60 + 260;}
+
+  function submit(){
+    if(over)return;
+    if(current.length!==LEN){msg("need all "+LEN+(TYPE==="letters"?" letters":" digits"),null);errShake();return;}
+    if(new Set(current).size!==LEN){msg(TYPE==="letters"?"letters must all be different":"digits must all be different","bad");errShake();return;}
+    if(TYPE==="letters"){
+      if(!ACCEPTSET[LEN].has(current.toLowerCase())){msg(`"${current}" isn't an English word`,"bad");errShake();return;}
+    }
+    if(guesses.includes(current)){msg("already tried that code","bad");errShake();return;}
+
+    const g=current;
+    guesses.push(g);recomputeUsed();
+    const landedRow=guesses.length-1;
+    current="";
+    paintGrid(landedRow);            // animate the row that just landed
+    const {b}=score(g);persist();
+
+    if(b===LEN){setTimeout(()=>endGame(true),revealDuration());return;}
+
+    if(extended){
+      // open-ended play: always keep one fresh row ahead, added one at a time
+      if(guesses.length>=MAX){MAX=guesses.length+1;buildGrid();paintGrid();}
+      msg("keep going — no pressure",null);
+      setTimeout(scrollActiveIntoView,revealDuration());
+      return;
+    }
+    if(guesses.length>=MAX){setTimeout(outOfTries,revealDuration());return;}
+    msg(triesLeftMsg(),null);
+  }
+
+  // scroll so the current (active) guess row sits just above the keyboard
+  function scrollActiveIntoView(){
+    const rows=$("#grid").children;
+    const target=rows[Math.min(guesses.length,rows.length-1)];
+    if(target&&target.scrollIntoView){
+      target.scrollIntoView({behavior:"smooth",block:"end"});
+    }
+  }
+
+  /* ---- out of tries: offer keep-going or reveal (no hard loss-frame) ---- */
+  function outOfTries(){
+    // in daily mode, lock the streak result now (a miss within the allotment)
+    if(gameMode==="daily" && !scored)settleStreak(false);
+    // if they've already chosen to keep going once, don't ask again — just extend silently
+    if(extended){grantMoreRows();return;}
+    showOutPrompt();
+  }
+  function showOutPrompt(){
+    $("#inputZone").style.display="none";
+    msg("",null);
+    $("#outPrompt").classList.add("show");
+    updateGiveUp();
+  }
+  function hideOutPrompt(){$("#outPrompt").classList.remove("show");}
+  function grantMoreRows(){
+    extended=true;
+    MAX=guesses.length+1;            // just one fresh row to start; more arrive as you guess
+    hideOutPrompt();
+    buildGrid();paintGrid();
+    $("#inputZone").style.display="";
+    msg("keep going — no pressure",null);
+    updateGiveUp();
+    persist();
+    setTimeout(scrollActiveIntoView,60);
+  }
+  $("#keepGoingBtn") && ($("#keepGoingBtn").onclick=grantMoreRows);
+  $("#revealBtn") && ($("#revealBtn").onclick=()=>{
+    revealed=true;hideOutPrompt();
+    endGame(false);
+  });
+
+  // record the daily streak outcome exactly once (daily mode only)
+  function settleStreak(w){
+    if(scored)return;
+    scored=true;
+    const D=ST.daily;
+    D.played++;
+    if(w){
+      D.wins++;
+      // continue streak if last solve was today or within the grace window (yesterday or the day before)
+      if(D.lastDay===null || D.lastDay>=dayNum-2){
+        D.streak=(D.lastDay===dayNum)?D.streak:D.streak+1;
+      }else{
+        D.streak=1;
+      }
+      if(D.streak>D.maxStreak)D.maxStreak=D.streak;
+    }else if(D.lastDay!==dayNum){
+      // a miss only breaks the streak if today isn't already a recorded win
+      D.streak=0;
+    }
+    D.lastDay=dayNum;
+  }
+
+  // record a custom game result once (no streak; tracks played/solved/best time)
+  function settleCustom(w){
+    if(scored)return;
+    scored=true;
+    const C=ST.custom;
+    C.played++;
+    if(w){
+      C.solved++;
+      const ms=Date.now()-startMs;
+      if(C.bestMs==null || ms<C.bestMs)C.bestMs=ms;
+    }
+  }
+
+  function endGame(w){
+    over=true;won=w;
+    updateGiveUp();
+    if(gameMode==="daily"){
+      settleStreak(w && guesses.length<=BASE_TRIES);  // wins past the allotment don't count for streak
+    }else{
+      // custom: a win only counts if solved within the base allotment (extra-try wins don't set best time)
+      settleCustom(w && guesses.length<=BASE_TRIES);
+    }
+    persist();refreshStats();showResult();
+  }
+
+  function emojiGrid(){
+    let h="";
+    guesses.forEach(g=>{
+      const {b,c}=score(g);let r="";
+      for(let k=0;k<b;k++)r+='<span class="gp b"></span>';
+      for(let k=0;k<c;k++)r+='<span class="gp c"></span>';
+      for(let k=0;k<LEN-b-c;k++)r+='<span class="gp x"></span>';
+      h+=`<div class="grow">${r}</div>`;
+    });
+    return h;
+  }
+  function shareText(){
+    const mark=TYPE==="letters"?"L":"N";
+    const solvedDaily=solvedInAllotment();
+    const resultTok=solvedDaily?`${guesses.length}/${BASE_TRIES}`:"X";
+    const head=`Hunch #${dayNum%1000} ${LEN}${mark} — ${resultTok}`;
+    const shown=guesses.slice(0,BASE_TRIES);
+    const body=shown.map(g=>{const {b,c}=score(g);return "🟩".repeat(b)+"🟨".repeat(c)+"⬛".repeat(LEN-b-c);}).join("\n");
+    const tail=solvedDaily?`\n🔥${ST.daily.streak}`:"";
+    return `${head}\n${body}${tail}`;
+  }
+
+  function showResult(){
+    $("#inputZone").style.display="none";
+    hideOutPrompt();
+    $("#gmiddle").classList.add("done");
+    const isDaily=(gameMode==="daily");
+    const v=$("#verdict");
+    if(won){
+      const n=guesses.length;
+      if(solvedInAllotment()){
+        v.textContent=n<=Math.ceil(BASE_TRIES*0.4)?"Brilliant":n<=Math.ceil(BASE_TRIES*0.7)?"Nicely done":"Solved";
+        v.className="verdict win";
+        if(isDaily){
+          $("#resultSub").innerHTML=`solved in <b>${n}</b> ${n===1?"try":"tries"} · streak <b>${ST.daily.streak}</b>`;
+        }else{
+          const ms=Date.now()-startMs;
+          const best=(ST.custom.bestMs!=null && ms<=ST.custom.bestMs);
+          $("#resultSub").innerHTML=`solved in <b>${n}</b> ${n===1?"try":"tries"} · <b>${fmtTime(ms)}</b>${best?" · new best!":""}`;
+        }
+      }else{
+        // cracked it, but only after taking extra tries — celebrate, don't punish
+        v.textContent="Got there";
+        v.className="verdict win";
+        $("#resultSub").innerHTML=isDaily
+          ? `cracked in <b>${n}</b> tries · today's streak result was already set`
+          : `cracked in <b>${n}</b> tries · beyond the ${BASE_TRIES}-try mark`;
+      }
+      launchConfetti();
+    }else{
+      v.textContent=revealed?"Revealed":"So close";
+      v.className="verdict lose";
+      $("#resultSub").innerHTML=`the secret was <b>${CODE}</b>`;
+    }
+    $("#gridShare").innerHTML=emojiGrid();
+
+    // mode-specific footer controls
+    const shareBtn=$("#shareBtn"), againBtn=$("#againBtn"), cd=$("#countdown");
+    if(isDaily){
+      shareBtn.style.display="";
+      againBtn.textContent="Back to menu";
+      cd.style.display="";
+      tickCountdown();
+    }else{
+      shareBtn.style.display="none";   // custom is practice — nothing to share
+      againBtn.textContent="Play again";
+      cd.style.display="none";
+      if(cdTimer)clearInterval(cdTimer);
+    }
+    $("#result").classList.add("show");
+  }
+
+  /* ---- lightweight confetti (canvas-free, respects reduced-motion) ---- */
+  function launchConfetti(){
+    if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+    const layer=document.createElement("div");layer.className="confetti-layer";
+    const colors=["var(--bull)","var(--cow)","var(--accent)"];
+    for(let i=0;i<36;i++){
+      const p=document.createElement("span");p.className="confetti";
+      p.style.left=(Math.random()*100)+"%";
+      p.style.background=colors[i%colors.length];
+      p.style.animationDelay=(Math.random()*180)+"ms";
+      p.style.animationDuration=(900+Math.random()*700)+"ms";
+      p.style.transform=`translateY(-20px) rotate(${Math.random()*360}deg)`;
+      layer.appendChild(p);
+    }
+    document.body.appendChild(layer);
+    setTimeout(()=>layer.remove(),1900);
+  }
+
+  $("#shareBtn").onclick=()=>{
+    const t=shareText();
+    if(navigator.share){navigator.share({text:t}).catch(()=>copy(t));}else copy(t);
+  };
+  function copy(t){navigator.clipboard?.writeText(t).then(()=>{const b=$("#shareBtn"),o=b.textContent;b.textContent="Copied!";setTimeout(()=>b.textContent=o,1500);});}
+
+  let cdTimer=null;
+  function tickCountdown(){
+    function go(){
+      const t=new Date(),e=new Date(t);e.setUTCHours(24,0,0,0);
+      let s=Math.max(0,Math.floor((e-t)/1000));
+      const h=String(Math.floor(s/3600)).padStart(2,"0");s%=3600;
+      const m=String(Math.floor(s/60)).padStart(2,"0"),ss=String(s%60).padStart(2,"0");
+      $("#countdown").innerHTML=`NEXT CODE IN <b>${h}:${m}:${ss}</b>`;
+    }
+    go();if(cdTimer)clearInterval(cdTimer);cdTimer=setInterval(go,1000);
+  }
+
+  document.addEventListener("keydown",e=>{
+    if($("#game").classList.contains("hidden")||over)return;
+    const k=e.key.toUpperCase();
+    if(POOL && POOL.includes(k)){if(current.length<LEN && !current.includes(k)){current+=k;paintSlots();}}
+    else if(e.key==="Backspace"){current=current.slice(0,-1);paintSlots();}
+    else if(e.key==="Enter"){submit();}
+  });
+
+  let rzT=null;
+  window.addEventListener("resize",()=>{
+    if($("#game").classList.contains("hidden"))return;
+    clearTimeout(rzT);
+    rzT=setTimeout(()=>{buildGrid();paintGrid();},120);
+  });
+})();
+</script>
+</body>
+</html>
