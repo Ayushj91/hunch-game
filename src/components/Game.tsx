@@ -1,25 +1,16 @@
 "use client";
 
-import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
-import { useEffect, useRef } from "react";
-import { BgDecor } from "@/components/BgDecor";
+import { useEffect } from "react";
 import { GameScreen } from "@/components/GameScreen";
 import { Header } from "@/components/Header";
 import { LandingScreen } from "@/components/LandingScreen";
 import { useStats } from "@/hooks/useStats";
 import { useGameStore } from "@/hooks/useGameState";
 
-gsap.registerPlugin(useGSAP);
-
 export function Game() {
   const { screen, startGame, goHome } = useGameStore();
   const { hydrate } = useStats();
   const playing = screen === "game";
-
-  const landingRef = useRef<HTMLDivElement>(null);
-  const gameRef = useRef<HTMLDivElement>(null);
-  const prevScreen = useRef(screen);
 
   useEffect(() => {
     hydrate();
@@ -52,52 +43,6 @@ export function Game() {
     };
   }, [playing]);
 
-  useGSAP(
-    () => {
-      if (prevScreen.current === screen) return;
-      const fromLanding = prevScreen.current === "landing" && screen === "game";
-      const toLanding = prevScreen.current === "game" && screen === "landing";
-
-      if (fromLanding && landingRef.current && gameRef.current) {
-        gsap.set(gameRef.current, { display: "block" });
-        gsap.timeline()
-          .to(landingRef.current, {
-            x: -80,
-            opacity: 0,
-            scale: 0.95,
-            duration: 0.4,
-            ease: "power3.in",
-            onComplete: () => gsap.set(landingRef.current, { display: "none" }),
-          })
-          .fromTo(
-            gameRef.current,
-            { x: 100, opacity: 0, scale: 1.02 },
-            { x: 0, opacity: 1, scale: 1, duration: 0.45, ease: "power3.out" },
-            "-=0.1"
-          );
-      } else if (toLanding && landingRef.current && gameRef.current) {
-        gsap.set(landingRef.current, { display: "block" });
-        gsap.timeline()
-          .to(gameRef.current, {
-            x: 100,
-            opacity: 0,
-            duration: 0.35,
-            ease: "power3.in",
-            onComplete: () => gsap.set(gameRef.current, { display: "none" }),
-          })
-          .fromTo(
-            landingRef.current,
-            { x: -80, opacity: 0 },
-            { x: 0, opacity: 1, duration: 0.4, ease: "power3.out" },
-            "-=0.1"
-          );
-      }
-
-      prevScreen.current = screen;
-    },
-    { dependencies: [screen] }
-  );
-
   const handleHome = () => {
     const state = useGameStore.getState();
     if (state.screen === "game" && !state.over && state.guesses.length > 0) {
@@ -122,33 +67,17 @@ export function Game() {
   };
 
   return (
-    <div className="relative w-full flex-1 flex flex-col max-w-screen mx-auto">
-      <BgDecor />
-
+    <div className="w-full flex-1 flex flex-col max-w-screen mx-auto">
       {!playing && <Header onHome={handleHome} />}
 
-      <div className="w-full flex-1 relative overflow-hidden">
-        <div
-          ref={landingRef}
-          className="w-full px-[18px]"
-          style={{ display: playing ? "none" : "block" }}
-        >
+      <div className="w-full flex-1">
+        {!playing ? (
           <LandingScreen onStart={handleStart} />
-        </div>
-        <div
-          ref={gameRef}
-          className="w-full"
-          style={{ display: playing ? "block" : "none" }}
-        >
+        ) : (
           <GameScreen onHome={goHome} onAgain={handleAgain} />
-        </div>
+        )}
       </div>
 
-      {!playing && (
-        <footer className="mt-8 mb-4 text-xs text-ink-faint text-center relative z-10">
-          New puzzle every midnight UTC · streak saves automatically
-        </footer>
-      )}
     </div>
   );
 }

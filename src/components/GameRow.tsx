@@ -1,7 +1,5 @@
 "use client";
 
-import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
 import { useEffect, useRef } from "react";
 import type { GuessResult } from "@/types/game";
 
@@ -29,141 +27,92 @@ export function GameRow({
   shake,
 }: GameRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
-  const tileRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const charRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const pegRefs = useRef<(HTMLSpanElement | null)[]>([]);
 
-  const tileSize =
-    len >= 5
-      ? "w-10 h-10 text-lg max-[440px]:w-9 max-[440px]:h-9 max-[440px]:text-base"
-      : "w-11 h-11 text-xl max-[440px]:w-10 max-[440px]:h-10 max-[440px]:text-lg";
+  const chPx = len >= 6 ? 22 : len >= 5 ? 25 : 28;
+  const chGap = len >= 6 ? 12 : len >= 5 ? 16 : 20;
 
-  useGSAP(
-    () => {
-      if (!animate || !guess) return;
+  useEffect(() => {
+    if (!animate || !guess) return;
 
-      const tiles = tileRefs.current.filter(Boolean) as HTMLElement[];
-      const pegs = pegRefs.current.filter(Boolean) as HTMLElement[];
+    for (let i = 0; i < len; i++) {
+      const el = charRefs.current[i];
+      if (!el) continue;
+      el.classList.add("reveal");
+      el.style.animationDelay = `${i * 70}ms`;
+      window.setTimeout(() => {
+        el.classList.remove("reveal");
+        el.style.animationDelay = "";
+      }, i * 70 + 360);
+    }
 
-      const tl = gsap.timeline();
-
-      // Tiles: sequential fade-up, smooth and quick
-      tl.fromTo(
-        tiles,
-        { y: 7, opacity: 0, scale: 0.88 },
-        {
-          y: 0,
-          opacity: 1,
-          scale: 1,
-          duration: 0.28,
-          stagger: 0.055,
-          ease: "power2.out",
-        }
-      );
-
-      // Row: very subtle acknowledgment pulse after last tile lands
-      if (rowRef.current) {
-        tl.to(rowRef.current, { scale: 1.012, duration: 0.1, ease: "power1.out" }, ">-0.04")
-          .to(rowRef.current, { scale: 1, duration: 0.22, ease: "power2.inOut" });
+    const pegDelayBase = len * 70 + 60;
+    let pi = 0;
+    if (result) {
+      for (let k = 0; k < result.b; k++) {
+        const peg = pegRefs.current[pi++];
+        if (peg) peg.style.animationDelay = `${pegDelayBase + k * 60}ms`;
       }
-
-      // Pegs: all fade in together as a calm group, slightly after tiles
-      if (pegs.length) {
-        tl.fromTo(
-          pegs,
-          { scale: 0.55, opacity: 0 },
-          {
-            scale: 1,
-            opacity: 1,
-            duration: 0.22,
-            stagger: 0.06,
-            ease: "power2.out",
-          },
-          ">"
-        );
+      for (let k = 0; k < result.c; k++) {
+        const peg = pegRefs.current[pi++];
+        if (peg) peg.style.animationDelay = `${pegDelayBase + (result.b + k) * 60}ms`;
       }
-    },
-    { dependencies: [animate, guess, result, len] }
-  );
+    }
+  }, [animate, guess, result, len]);
 
   useEffect(() => {
     if (!shake || !rowRef.current) return;
-    const tl = gsap.timeline({
-      onComplete: () => {
-        if (rowRef.current) gsap.set(rowRef.current, { x: 0 });
-      },
-    });
-    // Short, crisp bump — not a prolonged rattle
-    tl.to(rowRef.current, { x: 6, duration: 0.06, ease: "power2.out" })
-      .to(rowRef.current, { x: -5, duration: 0.09, ease: "power2.inOut" })
-      .to(rowRef.current, { x: 4, duration: 0.09, ease: "power2.inOut" })
-      .to(rowRef.current, { x: 0, duration: 0.12, ease: "power2.out" });
+    rowRef.current.classList.add("err");
+    const t = window.setTimeout(() => {
+      rowRef.current?.classList.remove("err");
+    }, 350);
+    return () => window.clearTimeout(t);
   }, [shake]);
 
-  // Subtle tile stamp when a letter is typed
-  useGSAP(
-    () => {
-      if (!isActive || !current) return;
-      const idx = current.length - 1;
-      const el = tileRefs.current[idx];
-      if (!el) return;
-      gsap.fromTo(el, { scale: 0.78 }, { scale: 1, duration: 0.16, ease: "power2.out" });
-    },
-    { dependencies: [current, isActive] }
-  );
-
-  useGSAP(
-    () => {
-      if (!rowRef.current) return;
-      if (!isActive) {
-        gsap.set(rowRef.current, { boxShadow: "none" });
-        return;
-      }
-      gsap.set(rowRef.current, { boxShadow: "0 0 0 1.5px var(--accent)" });
-      return () => {
-        if (rowRef.current) {
-          gsap.killTweensOf(rowRef.current);
-          gsap.set(rowRef.current, { boxShadow: "none" });
-        }
-      };
-    },
-    { dependencies: [isActive] }
-  );
-
-  const renderTiles = () => {
+  const renderChars = () => {
     if (guess) {
       return guess.split("").map((ch, i) => (
-        <div
+        <span
           key={i}
           ref={(el) => {
-            tileRefs.current[i] = el;
+            charRefs.current[i] = el;
           }}
-          className={`tile filled ${tileSize}`}
+          className="ch"
+          style={{ fontSize: chPx, minWidth: Math.round(chPx * 0.7) }}
         >
           {ch}
-        </div>
+        </span>
       ));
     }
+
     if (isActive) {
       return Array.from({ length: len }).map((_, i) => {
         const val = current?.[i];
         const isCursor = i === (current?.length ?? 0);
         return (
-          <div
+          <span
             key={i}
             ref={(el) => {
-              tileRefs.current[i] = el;
+              charRefs.current[i] = el;
             }}
-            className={`tile ${tileSize} ${
-              val ? "filled" : isCursor ? "active" : "ghost"
-            } ${isCursor && !val ? "text-accent" : "text-ink"}`}
+            className={`ch ${val ? "" : `empty${isCursor ? " cursor" : ""}`}`}
+            style={{ fontSize: chPx, minWidth: Math.round(chPx * 0.7) }}
           >
-            {val || ""}
-          </div>
+            {val || "·"}
+          </span>
         );
       });
     }
+
     return Array.from({ length: len }).map((_, i) => (
-      <div key={i} className={`tile ghost ${tileSize}`} />
+      <span
+        key={i}
+        className="ch empty"
+        style={{ fontSize: chPx, minWidth: Math.round(chPx * 0.7) }}
+      >
+        ·
+      </span>
     ));
   };
 
@@ -176,47 +125,23 @@ export function GameRow({
     for (let i = 0; i < len; i++) pegs.push("empty");
   }
 
-  const rowClass = isActive
-    ? "glass-strong"
-    : guess
-      ? "glass"
-      : isEmpty
-        ? "row-pending"
-        : "";
-
-  const badgeClass = isActive
-    ? "row-badge active"
-    : guess
-      ? "row-badge done"
-      : "row-badge";
-
   return (
     <div
       ref={rowRef}
-      className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all duration-200 ${rowClass}`}
+      className={`gridrow ${isActive ? "active" : ""} ${guess ? "guessed" : ""} ${isEmpty ? "empty" : ""}`}
     >
-      <div
-        className={`flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold tabular-nums ${badgeClass}`}
-      >
-        {index + 1}
+      <div className="gnum">{String(index + 1).padStart(2, "0")}</div>
+      <div className="gword" style={{ gap: chGap }}>
+        {renderChars()}
       </div>
-
-      <div className="flex gap-1.5 flex-1 justify-center">{renderTiles()}</div>
-
-      <div className="flex flex-col gap-1 flex-shrink-0">
+      <div className="result-pegs">
         {pegs.map((kind, i) => (
           <span
             key={i}
             ref={(el) => {
               pegRefs.current[i] = el;
             }}
-            className={`w-3.5 h-3.5 rounded-full transition-all ${
-              kind === "bull"
-                ? "peg-glow bull"
-                : kind === "cow"
-                  ? "peg-glow cow"
-                  : "peg-empty"
-            }`}
+            className={kind === "empty" ? "peg" : `peg ${kind}`}
           />
         ))}
       </div>

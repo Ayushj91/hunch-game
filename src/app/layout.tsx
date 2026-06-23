@@ -30,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${fraunces.variable} ${inter.variable} min-h-dvh flex flex-col items-stretch px-[18px] pt-8 pb-16`}
+        className={`${fraunces.variable} ${inter.variable} min-h-dvh flex flex-col items-center px-[18px] pt-8 pb-16`}
       >
         <ThemeProvider>{children}</ThemeProvider>
         <Analytics />

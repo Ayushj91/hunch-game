@@ -12,23 +12,17 @@ export function Header({ onHome }: { onHome: () => void }) {
   const isDark = mounted && (resolvedTheme === "dark" || theme === "dark");
 
   return (
-    <header className="w-full max-w-screen mx-auto mb-6 relative z-10 grid grid-cols-[1fr_auto] items-center gap-4">
-      <button
-        type="button"
-        className="flex items-center gap-2.5 cursor-pointer bg-transparent border-0 p-0 justify-self-start"
-        onClick={onHome}
-        aria-label="Go home"
-      >
-        <span className="text-2xl leading-none drop-shadow-sm">🐮</span>
-        <h1 className="font-display font-bold text-2xl tracking-tight">
-          <span className="gradient-text">Hunch</span>
-          <span className="text-accent">.</span>
+    <header className="w-full max-w-screen flex justify-between items-center mb-[30px]">
+      <button type="button" className="brand" onClick={onHome} aria-label="Go home">
+        <div className="dot text-[22px] leading-none">🐮</div>
+        <h1>
+          Hunch<span className="text-accent">.</span>
         </h1>
       </button>
 
       <button
         type="button"
-        className="icon-btn justify-self-end flex-shrink-0"
+        className="theme-btn"
         aria-label="Toggle dark mode"
         onClick={() => setTheme(isDark ? "light" : "dark")}
       >

@@ -36,7 +36,6 @@ export function GameGrid() {
     return () => window.clearTimeout(t);
   }, [shakeRow, clearShakeRow]);
 
-  // Only scroll when a new guess is submitted — never on initial mount
   useEffect(() => {
     if (over) return;
     if (guesses.length === 0) {
@@ -55,7 +54,7 @@ export function GameGrid() {
   }, [guesses.length, over]);
 
   return (
-    <div className="flex flex-col w-full gap-2">
+    <div className="grid">
       {Array.from({ length: max }).map((_, r) => {
         const guess = guesses[r];
         const isActive = r === guesses.length && !over;

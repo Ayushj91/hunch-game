@@ -34,11 +34,9 @@ export function HelpModal({ open, type, onClose }: HelpModalProps) {
   const noun = type === "letters" ? "word" : "code";
 
   return (
-    <Modal open={open} onClose={onClose} className="!max-w-[420px] !text-left">
-      <div className="font-display font-semibold text-[21px] text-ink mb-4 tracking-tight text-center">
-        How to play
-      </div>
-      <div className="mb-5">
+    <Modal open={open} onClose={onClose} className="help !max-w-[420px] !text-left">
+      <div className="modal-title">How to play</div>
+      <div className="help-body mb-5">
         <p className="text-[14.5px] text-ink-soft leading-relaxed mb-3.5">
           Guess the secret code in the fewest tries. After each guess, the pegs
           beside your row tell you how close you were:
@@ -116,7 +114,7 @@ export function HelpModal({ open, type, onClose }: HelpModalProps) {
           day you solve it.
         </p>
       </div>
-      <div className="flex justify-center">
+      <div className="modal-actions">
         <button type="button" className="btn primary" onClick={onClose}>
           Got it
         </button>

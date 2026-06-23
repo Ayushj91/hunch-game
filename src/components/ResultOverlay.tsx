@@ -1,8 +1,6 @@
 "use client";
 
-import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Confetti } from "@/components/Confetti";
 import { BASE_TRIES } from "@/lib/constants";
 import { fmtTime, score, solvedInAllotment } from "@/lib/gameLogic";
@@ -28,31 +26,10 @@ export function ResultOverlay({ onAgain }: ResultOverlayProps) {
   } = useGameStore();
   const { stats } = useStats();
   const countdown = useCountdown(over && gameMode === "daily");
-  const ref = useRef<HTMLDivElement>(null);
   const [shareLabel, setShareLabel] = useState("Share");
   const [showConfetti, setShowConfetti] = useState(false);
 
   const visible = over;
-
-  useGSAP(
-    () => {
-      if (!visible || !ref.current) return;
-      gsap.fromTo(
-        ref.current,
-        { opacity: 0, y: 20, scale: 0.94 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.45, ease: "back.out(1.5)" }
-      );
-      const verdict = ref.current.querySelector(".verdict");
-      if (verdict && won) {
-        gsap.fromTo(
-          verdict,
-          { scale: 0.85, opacity: 0 },
-          { scale: 1, opacity: 1, duration: 0.5, ease: "elastic.out(1, 0.6)" }
-        );
-      }
-    },
-    { dependencies: [visible, won] }
-  );
 
   useEffect(() => {
     if (visible && won) {
@@ -139,26 +116,18 @@ export function ResultOverlay({ onAgain }: ResultOverlayProps) {
   return (
     <>
       <Confetti active={showConfetti} />
-      <div ref={ref} className="text-center w-full max-w-[420px] mx-auto mt-4 glass-strong rounded-2xl p-6">
-        <div
-          className={`verdict font-display font-bold text-4xl mb-2 tracking-tight ${
-            won ? "gradient-text" : "text-ink-soft"
-          }`}
-        >
-          {verdict}
-        </div>
-        <p className="text-[15px] text-ink-soft mb-5">
+      <div className="result-block">
+        <div className={`verdict ${won ? "win" : "lose"}`}>{verdict}</div>
+        <p className="sub">
           {subHtml.split(/(\d+|[A-Z]+)/).map((part, i) =>
             /^\d+$/.test(part) || part === code ? (
-              <b key={i} className="text-ink font-semibold">
-                {part}
-              </b>
+              <b key={i}>{part}</b>
             ) : (
               part
             )
           )}
         </p>
-        <div className="inline-flex flex-col gap-1.5 mb-6">
+        <div className="grid-share">
           {guesses.map((g, gi) => {
             const { b, c } = score(g, code);
             const cells: string[] = [];
@@ -166,24 +135,18 @@ export function ResultOverlay({ onAgain }: ResultOverlayProps) {
             for (let k = 0; k < c; k++) cells.push("c");
             for (let k = 0; k < len - b - c; k++) cells.push("x");
             return (
-              <div key={gi} className="flex gap-1.5 justify-center">
+              <div key={gi} className="grow">
                 {cells.map((kind, i) => (
                   <span
                     key={i}
-                    className={`w-5 h-5 rounded-lg ${
-                      kind === "b"
-                        ? "peg-glow bull"
-                        : kind === "c"
-                          ? "peg-glow cow"
-                          : "bg-line"
-                    }`}
+                    className={`gp ${kind === "b" ? "b" : kind === "c" ? "c" : "x"}`}
                   />
                 ))}
               </div>
             );
           })}
         </div>
-        <div className="flex gap-2.5 justify-center flex-wrap">
+        <div className="actions">
           {isDaily && (
             <button type="button" className="btn primary" onClick={handleShare}>
               {shareLabel}
@@ -194,8 +157,8 @@ export function ResultOverlay({ onAgain }: ResultOverlayProps) {
           </button>
         </div>
         {isDaily && countdown && (
-          <p className="text-[13px] text-ink-faint mt-5 tabular-nums">
-            NEXT CODE IN <b className="text-ink-soft font-semibold">{countdown}</b>
+          <p className="countdown">
+            NEXT CODE IN <b>{countdown}</b>
           </p>
         )}
       </div>
